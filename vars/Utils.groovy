@@ -1,13 +1,19 @@
 
 
-def getReleasedVersion() {
-	def matcher = readFile('common/pom.xml') =~ '<version>(.+?)</version>'
+def getArtifact(dirName) {
+	def matcher = readFile("${dirName}/pom.xml") =~ '<artifactId>(.+?)</artifactId>'
+	matcher ? matcher[0][1] : null
+}
+
+def getReleasedVersion(dirName) {
+	def matcher = readFile("${dirName}/pom.xml") =~ '<version>(.+?)</version>'
     matcher ? matcher[0][1] : null 	
 }
-def sendNotification(String buildStatus) {
+def sendNotification(buildStatus) {
 	//def mailRecipients = 'r.satti@accenture.com, sashi.kumar.sharma@accenture.com, shresthi.garg@accenture.com, suresh.kumar.sahoo@accenture.com';
 	def mailRecipients = 'r.satti@accenture.com'
-	
+    echo "buildStatus: ${buildStatus}"
+
 	// build status of null means success
     buildStatus =  buildStatus ?: 'SUCCESS'
 	if (buildStatus == 'SUCCESS')
