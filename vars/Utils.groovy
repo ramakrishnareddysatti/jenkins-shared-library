@@ -15,9 +15,9 @@ def sendNotification(buildStatus) {
     echo "buildStatus: ${buildStatus}"
 
 	// build status of null means success
-    var buildStatusVar =  buildStatus ?: 'SUCCESS'
+    def buildStatusVar =  buildStatus ?: 'SUCCESS'
     echo "buildStatusVar: ${buildStatusVar}"
-    
+
 	if (buildStatusVar == 'SUCCESS')
 	{
 		// notify users when the build is back to normal
