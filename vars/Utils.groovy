@@ -15,8 +15,8 @@ def sendNotification(buildStatus) {
     echo "buildStatus: ${buildStatus}"
 
 	// build status of null means success
-    buildStatus =  buildStatus ?: 'SUCCESS'
-	if (buildStatus == 'SUCCESS')
+    var buildStatusVar =  buildStatus ?: 'SUCCESS'
+	if (buildStatusVar == 'SUCCESS')
 	{
 		// notify users when the build is back to normal
 		emailext(
@@ -28,7 +28,7 @@ def sendNotification(buildStatus) {
 				replyTo: "${mailRecipients}"
 				)
 	}
-	else if (buildStatus == 'FAILED')
+	else if (buildStatusVar == 'FAILED')
 	{
 		// notify users when the Pipeline fails
 		emailext(
