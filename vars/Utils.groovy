@@ -1,4 +1,58 @@
 
+def pushImageToRepo(applicationDir, distroDirPath, artifactName, releasedVersion) {
+	sh "docker images"
+	dir (applicationDir) {
+		//docker save -o <path for generated tar file> <existing image name>
+		sh "docker save -o target/${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
+		echo "Copying tar file..."
+		sh "cp -rf target/${artifactName}-${releasedVersion}.tar ${distroDirPath}"
+	}
+
+	dir (distroDirPath) {
+		sh "git pull origin master"
+		sh "git add ${artifactName}-${releasedVersion}.tar"
+		sh 'git commit -m "Jenkins Job:${JOB_NAME} pushing image tar file" '
+		sh "git push origin HEAD:master"
+	}
+}
+
+def tagBranch(repoUrl, releasedVersion) {
+	sh "ls -l"
+	sh "git remote set-url origin ${repoUrl}"
+	//sh "git tag ${IMAGE_BRANCH_PREFIX}-${BUILD_NUMBER}"
+	sh "git tag ${releasedVersion}-${BUILD_NUMBER}"
+	sh "git push --tags"
+}
+
+def saveImage(distroDirPath, artifactName, releasedVersion, destinationIP) {
+	timeout(activity: true, time: 20, unit: 'SECONDS') {
+				input message: 'Save to QA Env?', ok: 'Save'
+	}
+	sh "scp -Cp ${distroDirPath}/${artifactName}-${releasedVersion}.tar centos@${destinationIP}:/home/centos"
+	// TODO: should move to load image method
+	sh "ssh -t centos@${destinationIP} 'ls && sudo docker load -i ${artifactName}-${releasedVersion}.tar' "
+}
+
+def deployAPIToDev(artifactName, releasedVersion, PROP_ENV) {
+			sh "docker ps"
+			def  containerId = sh (
+					script: "docker ps --no-trunc -aqf 'name=${artifactName}'",
+					returnStdout: true
+					).trim()
+			echo "containerId: ${containerId}"
+
+			if (containerId != "") {
+				sh "docker stop ${containerId}"
+				sh "docker rm -f ${containerId}"
+			}
+			sh "docker run -e 'SPRING_PROFILES_ACTIVE=${PROP_ENV}' -d -p 8099:8090 --name ${artifactName} -t ${artifactName}:${releasedVersion}"
+}
+
+def buildImage(artifactName, releasedVersion) {
+		echo "Starting Docker Image Creation..."
+		sh "docker build -t ${artifactName}:${releasedVersion} ."
+		echo "Docker Image Creation Complted..."
+}
 
 def removeImages(artifactName) {
 		try {
@@ -48,7 +102,7 @@ def sendNotification(buildStatus) {
 				replyTo: "${mailRecipients}"
 				)
 	}
-	else if (buildStatusVar == 'FAILED')
+	else if (buildStatusVar == 'FAILURE')
 	{
 		// notify users when the Pipeline fails
 		emailext(
