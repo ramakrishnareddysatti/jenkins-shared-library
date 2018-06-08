@@ -48,12 +48,6 @@ def deployAPIToDev(artifactName, releasedVersion, PROP_ENV) {
 			sh "docker run -e 'SPRING_PROFILES_ACTIVE=${PROP_ENV}' -d -p 8099:8090 --name ${artifactName} -t ${artifactName}:${releasedVersion}"
 }
 
-def buildImage(artifactName, releasedVersion) {
-		echo "Starting Docker Image Creation..."
-		sh "docker build -t ${artifactName}:${releasedVersion} ."
-		echo "Docker Image Creation Complted..."
-}
-
 def removeImages(artifactName) {
 		try {
 			sh 'docker rmi -f $(docker images -f "dangling=true" -q)'
