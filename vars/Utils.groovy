@@ -8,9 +8,9 @@ def removeImages(artifactName) {
 		}
 
 		try {
-			//sh 'docker rmi -f $(docker images | grep "${artifactName}" | awk \"{print $3}\")'
+			sh 'docker rmi -f $(docker images | grep ${artifactName} | awk \"{print $3}\")'
 			
-			sh "docker rmi -f $(docker images | grep ${artifactName} | awk '{print \$3}')"
+			//sh "docker rmi -f $(docker images | grep ${artifactName} | awk '{print \$3}')"
 		} catch (err) {
 			echo "Trying remove ${artifactName}: ${err}"
 		}
