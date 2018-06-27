@@ -3,7 +3,12 @@ def pushImageToRepo(applicationDir, distroDirPath, artifactName, releasedVersion
 	sh "docker images"
 	dir (applicationDir) {
 		//docker save -o <path for generated tar file> <existing image name>
-		sh "docker save -o target/${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
+		if (applicationDir == 'demandplannerapi') {
+			sh "docker save -o target/${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
+		} else if (applicationDir == 'demandplannerui') {
+			sh "docker save -o ${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
+		}
+
 		echo "Copying tar file..."
 		sh "cp -rf target/${artifactName}-${releasedVersion}.tar ${distroDirPath}"
 	}
