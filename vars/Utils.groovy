@@ -5,12 +5,13 @@ def pushImageToRepo(applicationDir, distroDirPath, artifactName, releasedVersion
 		//docker save -o <path for generated tar file> <existing image name>
 		if (applicationDir == 'demandplannerapi') {
 			sh "docker save -o target/${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
+			echo "Copying demandplannerapi tar file..."
+			sh "cp -rf target/${artifactName}-${releasedVersion}.tar ${distroDirPath}"
 		} else if (applicationDir == 'demandplannerui') {
 			sh "docker save -o ${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
+			echo "Copying demandplannerui tar file..."
+			sh "cp -rf ${artifactName}-${releasedVersion}.tar ${distroDirPath}"
 		}
-
-		echo "Copying tar file..."
-		sh "cp -rf target/${artifactName}-${releasedVersion}.tar ${distroDirPath}"
 	}
 
 	dir (distroDirPath) {
