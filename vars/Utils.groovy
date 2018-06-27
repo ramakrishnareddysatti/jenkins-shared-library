@@ -26,7 +26,7 @@ def tagBranch(repoUrl, releasedVersion) {
 
 def saveImage(distroDirPath, artifactName, releasedVersion, destinationIP) {
 	timeout(activity: true, time: 20, unit: 'SECONDS') {
-				input message: 'Save to QA Env?', ok: 'Save'
+		input message: 'Save to QA Env?', ok: 'Save'
 	}
 	sh "scp -Cp ${distroDirPath}/${artifactName}-${releasedVersion}.tar centos@${destinationIP}:/home/centos"
 	// TODO: should move to load image method
@@ -34,34 +34,51 @@ def saveImage(distroDirPath, artifactName, releasedVersion, destinationIP) {
 }
 
 def deployAPIToDev(artifactName, releasedVersion, PROP_ENV) {
-			sh "docker ps"
-			def  containerId = sh (
-					script: "docker ps --no-trunc -aqf 'name=${artifactName}'",
-					returnStdout: true
-					).trim()
-			echo "containerId: ${containerId}"
+	sh "docker ps"
+	def  containerId = sh (
+			script: "docker ps --no-trunc -aqf 'name=${artifactName}'",
+			returnStdout: true
+			).trim()
+	echo "containerId: ${containerId}"
 
-			if (containerId != "") {
-				sh "docker stop ${containerId}"
-				sh "docker rm -f ${containerId}"
-			}
-			sh "docker run -e 'SPRING_PROFILES_ACTIVE=${PROP_ENV}' -d -p 8099:8090 --name ${artifactName} -t ${artifactName}:${releasedVersion}"
+	if (containerId != "") {
+		sh "docker stop ${containerId}"
+		sh "docker rm -f ${containerId}"
+	}
+	sh "docker run -e 'SPRING_PROFILES_ACTIVE=${PROP_ENV}' -d -p 8099:8090 --name ${artifactName} -t ${artifactName}:${releasedVersion}"
+}
+
+def deployUIToDev(artifactName, releasedVersion, PROP_ENV) {
+	sh "docker ps"
+	def  containerId = sh (
+			script: "docker ps --no-trunc -aqf 'name=${artifactName}'",
+			returnStdout: true
+			).trim()
+	echo "containerId: ${containerId}"
+
+	if (containerId != "") {
+		sh "docker stop ${containerId}"
+		sh "docker rm -f ${containerId}"
+	}
+	//docker run -it -p 8080:80 angular-sample-app
+	//sh "docker run -e 'SPRING_PROFILES_ACTIVE=${PROP_ENV}' -d -p 8099:8090 --name  ${artifactName} -t ${artifactName}"
+	sh "docker run -d -p 8098:80 --name  ${artifactName} -t ${artifactName}:${releasedVersion}"
 }
 
 def removeImages(artifactName) {
-		try {
-			sh 'docker rmi -f $(docker images -f "dangling=true" -q)'
-		} catch (err) {
-			echo "Trying to remove dangling Images: ${err}"
-		}
+	try {
+		sh 'docker rmi -f $(docker images -f "dangling=true" -q)'
+	} catch (err) {
+		echo "Trying to remove dangling Images: ${err}"
+	}
 
-		try {
-			sh 'docker rmi -f $(docker images | grep ${artifactName} | awk \"{print $3}\")'
-			
-			//sh "docker rmi -f $(docker images | grep ${artifactName} | awk '{print \$3}')"
-		} catch (err) {
-			echo "Trying remove ${artifactName}: ${err}"
-		}
+	try {
+		sh 'docker rmi -f $(docker images | grep ${artifactName} | awk \"{print $3}\")'
+
+		//sh "docker rmi -f $(docker images | grep ${artifactName} | awk '{print \$3}')"
+	} catch (err) {
+		echo "Trying remove ${artifactName}: ${err}"
+	}
 }
 
 def getArtifact(dirName) {
@@ -71,17 +88,17 @@ def getArtifact(dirName) {
 
 def getReleasedVersion(dirName) {
 	def matcher = readFile("${dirName}/pom.xml") =~ '<version>(.+?)</version>'
-    matcher ? matcher[0][1] : null 	
+	matcher ? matcher[0][1] : null
 }
 
 def sendNotification(buildStatus) {
-	//def mailRecipients = 'r.satti@accenture.com, sashi.kumar.sharma@accenture.com, shresthi.garg@accenture.com, suresh.kumar.sahoo@accenture.com';
-	def mailRecipients = 'r.satti@accenture.com'
-    echo "buildStatus: ${buildStatus}"
+	def mailRecipients = 'r.satti@accenture.com, sashi.kumar.sharma@accenture.com, shresthi.garg@accenture.com, suresh.kumar.sahoo@accenture.com, s.b.jha@accenture.com';
+	//def mailRecipients = 'r.satti@accenture.com'
+	echo "buildStatus: ${buildStatus}"
 
 	// build status of null means success
-    def buildStatusVar =  buildStatus ?: 'SUCCESS'
-    echo "buildStatusVar: ${buildStatusVar}"
+	def buildStatusVar =  buildStatus ?: 'SUCCESS'
+	echo "buildStatusVar: ${buildStatusVar}"
 
 	if (buildStatusVar == 'SUCCESS')
 	{
@@ -90,7 +107,7 @@ def sendNotification(buildStatus) {
 				subject: "JENKINS Notification : Successful Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
 				//  Generates beautiful email format. Since I didn't write the contents of "groovy-html.template", I am afraid to use
 				//body: '''${SCRIPT, template="groovy-html.template"}''',
-                body: """ <p>Successful: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]':</p><p>Check console output at "<a href="${env.BUILD_URL}">${env.JOB_NAME} [${env.BUILD_NUMBER}]</a>"</p>""",
+				body: """ <p>Successful: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]':</p><p>Check console output at "<a href="${env.BUILD_URL}">${env.JOB_NAME} [${env.BUILD_NUMBER}]</a>"</p>""",
 				recipientProviders: [culprits(), developers(), requestor(), brokenTestsSuspects(), brokenBuildSuspects(), upstreamDevelopers()],
 				to: "${mailRecipients}",
 				replyTo: "${mailRecipients}"
@@ -103,12 +120,10 @@ def sendNotification(buildStatus) {
 				subject: "JENKINS Notification : FAILED Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
 				//  Generates beautiful email format. Since I didn't write the contents of "groovy-html.template", I am afraid to use
 				//body: '''${SCRIPT, template="groovy-html.template"}''',
-                body: """ <p>FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]':</p><p>Check console output at "<a href="${env.BUILD_URL}">${env.JOB_NAME} [${env.BUILD_NUMBER}]</a>"</p>""",
+				body: """ <p>FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]':</p><p>Check console output at "<a href="${env.BUILD_URL}">${env.JOB_NAME} [${env.BUILD_NUMBER}]</a>"</p>""",
 				recipientProviders: [culprits(), developers(), requestor(), brokenTestsSuspects(), brokenBuildSuspects(), upstreamDevelopers()],
 				to: "${mailRecipients}",
 				replyTo: "${mailRecipients}"
 				)
 	}
 }
-
-
