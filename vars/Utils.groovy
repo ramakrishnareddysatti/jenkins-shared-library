@@ -92,8 +92,8 @@ def getReleasedVersion(dirName) {
 }
 
 def sendNotification(buildStatus) {
-	def mailRecipients = 'r.satti@accenture.com, sashi.kumar.sharma@accenture.com, shresthi.garg@accenture.com, suresh.kumar.sahoo@accenture.com, s.b.jha@accenture.com';
-	//def mailRecipients = 'r.satti@accenture.com'
+	//def mailRecipients = 'r.satti@accenture.com, sashi.kumar.sharma@accenture.com, shresthi.garg@accenture.com, suresh.kumar.sahoo@accenture.com, s.b.jha@accenture.com';
+	def mailRecipients = 'r.satti@accenture.com'
 	echo "buildStatus: ${buildStatus}"
 
 	// build status of null means success
