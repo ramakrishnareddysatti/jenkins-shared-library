@@ -109,15 +109,23 @@ def deployUIToDev(artifactName, releasedVersion, PROP_ENV) {
 }
 
 def removeImages(artifactName) {
+	sh '''
+		if docker images -f "dangling=true" | grep ago --quiet; then
+			docker rmi -f $(docker images -f "dangling=true" -q)
+		fi
+	'''
+	/*
 	try {
-		sh 'docker rmi -f $(docker images -f "dangling=true" -q)'
+		//sh "docker rmi -f $(docker images -f 'dangling=true' -q)"
+		sh "docker rmi -f $(docker images -f dangling=true -q)"
 	} catch (err) {
 		echo "Trying to remove dangling Images: ${err}"
 	}
+	*/
+	
 
 	try {
 		sh 'docker rmi -f $(docker images | grep ${artifactName} | awk \"{print $3}\")'
-
 		//sh "docker rmi -f $(docker images | grep ${artifactName} | awk '{print \$3}')"
 	} catch (err) {
 		echo "Trying remove ${artifactName}: ${err}"
