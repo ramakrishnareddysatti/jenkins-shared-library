@@ -26,7 +26,7 @@ def sourceCodeCheckout(applicationDir, branchName, repoUrl, distroDirPath, distr
 	}
 }
 
-def build(applicationDir, artifactName, releasedVersion) {
+def uiDockerBuild(applicationDir, artifactName, releasedVersion) {
 	dir(applicationDir) {
 		echo "Starting Docker Image Creation..."
 		sh "docker build -t ${artifactName}:${releasedVersion} ."
