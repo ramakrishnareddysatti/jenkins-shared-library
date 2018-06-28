@@ -110,8 +110,6 @@ def deployUIToDev(artifactName, releasedVersion, PROP_ENV) {
 		sh "docker stop ${containerId}"
 		sh "docker rm -f ${containerId}"
 	}
-	//docker run -it -p 8080:80 angular-sample-app
-	//sh "docker run -e 'SPRING_PROFILES_ACTIVE=${PROP_ENV}' -d -p 8099:8090 --name  ${artifactName} -t ${artifactName}"
 	sh "docker run -d -p 8098:80 --name  ${artifactName} -t ${artifactName}:${releasedVersion}"
 }
 
