@@ -121,7 +121,8 @@ def removeImages(artifactName) {
 
 	 //docker rmi $(docker images --filter=reference="*:stuff_*" -q)
 	 //sh "docker rmi $(docker images --filter=reference=${artifactName} -q)"
-	 	sh "docker rmi -f $(docker images | grep ${artifactName} | awk '{print \\$3}')"
+	 	sh "docker rmi -f $(docker images | grep ${artifactName} | awk { print $3 })"
+		 //docker rmi --force $(docker images | awk '/^<none>/ { print $3 }')
 
 		 //sh "ls -l /tmp/environment-creation-enhanced/ocp-groups/ | grep -v total | grep -v yaml | awk '{print \$9}' > ${groupListDir}/fileList"
 /*
