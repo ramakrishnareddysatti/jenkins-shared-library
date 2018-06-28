@@ -134,20 +134,20 @@ def removeImages(artifactName, tag) {
 	
 	if (images != "") {
 		imagesWithTag = sh (
-			script: "docker images -a | grep \"${artifactName}\" | | grep \"${tag}\" ",
+			script: "docker images -a | grep \"${artifactName}\" | grep \"${tag}\" ",
 			returnStdout: true
 			).trim()
 	}
 
 	if (imagesWithTag != "") {
 		imageIdsWithTag = sh (
-			script: "docker images -a | grep \"${artifactName}\" | | grep \"${tag}\" ",
+			script: "docker images -a | grep \"${artifactName}\" | grep \"${tag}\" ",
 			returnStdout: true
 			).trim()
 	}
 
 	if (images != "" && imagesWithTag != "") {
-		sh "docker images -a | grep \" ${artifactName} \" | grep \" ${tag} \" | awk '{print $3}' | xargs --no-run-if-empty docker rmi "
+		sh "docker images -a | grep \"${artifactName}\" | grep \"${tag}\" | awk '{print $3}' | xargs --no-run-if-empty docker rmi "
 	}
 
 
