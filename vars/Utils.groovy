@@ -113,11 +113,13 @@ def deployUIToDev(artifactName, releasedVersion, PROP_ENV) {
 	sh "docker run -d -p 8098:80 --name  ${artifactName} -t ${artifactName}:${releasedVersion}"
 }
 
-def removeImages(artifactName) {
+def removeImages(artifactName, tag) {
 
 	sh 'docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi'
+	//sh 'docker images -a | awk '{print $3}' | grep 0.0'
+	sh 'docker rmi -f $(docker images -a | grep "${artifactName}" | grep "${tag}" | awk \'{ print \$3 }\')'
 
-//----------- below two lines DO NOT DELETE
+//----------- below two lines DO NOT DELETE. THEY ARE WORKING FINE.
 	//sh 'docker images -a | grep "<none>" | awk \'{print $3}\' | xargs -L1 docker rmi -f'
 	//sh 'docker images -a | grep "<none>" | awk \'{print $3}\' | xargs --no-run-if-empty docker rmi'
 	
