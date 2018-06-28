@@ -132,6 +132,56 @@ def removeImages(artifactName) {
 	}
 }
 
+//This stage installs all of the node dependencies, performs linting and builds the code.
+def npmBuild(branchName, repoUrl) {
+	//ng build generated 'dist' folder. To avoid putting 'dist' folder in  'demandplannerui'
+	dir('demandplannerui_npmbuild') {
+		git branch: "${branchName}",
+		credentialsId: 'git-repo-ssh-access',
+		url: "${repoUrl}"
+
+		sh '''
+				node --version
+				npm --version
+				npm install -g npm@5.6.0 @angular/cli@~1.7.3
+				npm install
+				ng build --prod --aot
+			'''   
+	}
+}
+
+def uiCodeQualityAnalysis(applicationDir) {
+	def sonarqubeScannerHome = tool 'SonarQubeScanner_V3'
+	dir(applicationDir) {
+		withSonarQubeEnv('SonarQube_V7') {
+			sh 'ls -l'
+			sh "${sonarqubeScannerHome}/bin/sonar-scanner" +
+					" -Dsonar.projectKey=demandplannerui" +
+					" -Dsonar.sources=src" +
+					" -Dsonar.exclusions=**/node_modules/**,**/*.spec.ts" +
+					" -Dsonar.tests=src" +
+					" -Dsonar.test.inclusions=**/*.spec.ts" +
+					" -Dsonar.ts.tslintconfigpath=tslint.json" +
+					" -Dsonar.ts.lcov.reportpath=test-results/coverage/coverage.lcov" +
+					" -Dsonar.sourceEncoding=UTF-8"
+		}
+	}
+}
+
+def processQualityGate(){
+	// Just in case something goes wrong, pipeline will be killed after a timeout
+	timeout(time: 2, unit: 'MINUTES') {
+		def qualityGate = waitForQualityGate() // Reuse taskId previously collected by withSonarQubeEnv
+		if (qualityGate.status != 'OK') {
+			//error "Pipeline aborted due to quality gate failure: ${qualityGate.status}"
+			println("SonarQube Quality Gate Failed.failure: ${qualityGate.status}")
+		} else
+		{
+			println("SonarQube Quality Gate Passed")
+		}
+	}
+}
+
 def getArtifact(dirName) {
 	def matcher = readFile("${dirName}/pom.xml") =~ '<artifactId>(.+?)</artifactId>'
 	matcher ? matcher[0][1] : null
