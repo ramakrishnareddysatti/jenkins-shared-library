@@ -116,23 +116,8 @@ def deployUIToDev(artifactName, releasedVersion, PROP_ENV) {
 }
 
 def removeImages(artifactName) {
-	sh 'docker images -qf dangling=true | xargs --no-run-if-empty docker rmi'
-
-	/*
-	sh '''
-		if docker images -f "dangling=true" then
-			docker rmi -f $(docker images -f "dangling=true" -q)
-		fi
-	'''
-	
-	 try {
-	 //sh "docker rmi -f $(docker images -f 'dangling=true' -q)"
-	 sh "docker rmi -f $(docker images -f dangling=true -q)"
-	 } catch (err) {
-	 echo "Trying to remove dangling Images: ${err}"
-	 }
-	 */
-
+	//sh 'docker images -qf dangling=true | xargs --no-run-if-empty docker rmi'
+	sh 'docker image prune'
 
 	try {
 		sh 'docker rmi -f $(docker images | grep ${artifactName} | awk \"{print $3}\")'
