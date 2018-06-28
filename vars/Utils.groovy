@@ -116,11 +116,12 @@ def deployUIToDev(artifactName, releasedVersion, PROP_ENV) {
 }
 
 def removeImages(artifactName) {
+
 	sh 'docker images -qf dangling=true | xargs --no-run-if-empty docker rmi'
 	//sh 'docker image prune'
-
-	 //sh 'docker rmi $(docker images --filter=reference="demandplannerui" -q)'
-	 sh 'docker images | grep "${artifactName}" | awk '{print $3}' | xargs -L1 docker rmi'	 
+	sh 'docker ps -a -q --filter=ancestor="${artifactName}" | xargs -I {} docker stop {}'
+	sh 'docker rmi $(docker images --filter=reference="${artifactName}" -q)'
+	 //sh 'docker images | grep "${artifactName}" | awk '{print $3}' | xargs -L1 docker rmi'	 
 	 //sh "docker rmi $(docker images --filter=reference=${artifactName} -q)"
 	 	//sh "docker rmi -f $(docker images | grep ${artifactName} | awk '{ print \\$3 }' )"
 		 //sh "docker rmi -f $(docker images | grep ${artifactName})"
