@@ -120,7 +120,7 @@ def removeImages(artifactName) {
 	//sh 'docker image prune'
 
 	 //docker rmi $(docker images --filter=reference="*:stuff_*" -q)
-	 sh "docker rmi $(docker images --filter=reference='${artifactName}*' -q)"
+	 sh "docker rmi $(docker images --filter=reference='${artifactName}' -q)"
 
 	try {
 		sh 'docker rmi -f $(docker images | grep ${artifactName} | awk \"{print $3}\")'
