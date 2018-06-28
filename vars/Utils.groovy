@@ -123,7 +123,33 @@ def removeImages(artifactName, tag) {
 
 	//sh "docker images -a | grep \"${artifactName}\" | grep \"${tag}\" | awk '{print $3}' | xargs --no-run-if-empty docker rmi "
 
-	sh "docker images -a | grep \"${artifactName}\" "
+	sh "docker images -a | grep \"${artifactName}\" | grep \"${tag}\" | awk '{print $3}' | xargs --no-run-if-empty docker rmi "
+
+	def images, imagesWithTag, imageIdsWithTag
+
+	images = sh (
+			script: "docker images -a | grep \"${artifactName}\" ",
+			returnStdout: true
+			).trim()
+	
+	if (images != "") {
+		imagesWithTag = sh (
+			script: "docker images -a | grep \"${artifactName}\" | | grep \"${tag}\" ",
+			returnStdout: true
+			).trim()
+	}
+
+	if (imagesWithTag != "") {
+		imageIdsWithTag = sh (
+			script: "docker images -a | grep \"${artifactName}\" | | grep \"${tag}\" ",
+			returnStdout: true
+			).trim()
+	}
+
+	if (images != "" && imagesWithTag != "") {
+		sh "docker images -a | grep \"${artifactName}\" | grep \"${tag}\" | awk '{print $3}' | xargs --no-run-if-empty docker rmi "
+	}
+
 
 //----------- below two lines DO NOT DELETE. THEY ARE WORKING FINE.
 	//sh 'docker images -a | grep "<none>" | awk \'{print $3}\' | xargs -L1 docker rmi -f'
