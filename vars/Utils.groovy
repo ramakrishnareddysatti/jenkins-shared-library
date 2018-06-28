@@ -119,10 +119,11 @@ def removeImages(artifactName) {
 	sh 'docker images -qf dangling=true | xargs --no-run-if-empty docker rmi'
 	//sh 'docker image prune'
 
-	 //docker rmi $(docker images --filter=reference="*:stuff_*" -q)
+	 sh 'docker rmi $(docker images --filter=reference="demandplannerui" -q)'
+	 
 	 //sh "docker rmi $(docker images --filter=reference=${artifactName} -q)"
 	 	//sh "docker rmi -f $(docker images | grep ${artifactName} | awk '{ print \\$3 }' )"
-		 sh "docker rmi -f $(docker images | grep ${artifactName})"
+		 //sh "docker rmi -f $(docker images | grep ${artifactName})"
 
 		 //docker rmi --force $(docker images | awk '/^<none>/ { print $3 }')
 
