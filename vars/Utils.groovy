@@ -155,9 +155,9 @@ def npmBuild(applicationDir, branchName, repoUrl) {
 		credentialsId: 'git-repo-ssh-access',
 		url: "${repoUrl}"
 
+		//node --version
+		//npm --version
 		sh '''
-				node --version
-				npm --version
 				npm install -g npm@5.6.0 @angular/cli@~1.7.3
 				npm install
 				ng build --prod --aot
