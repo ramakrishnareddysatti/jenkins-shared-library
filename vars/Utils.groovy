@@ -115,14 +115,14 @@ def removeImages(artifactName) {
 		fi
 	'''
 	/*
-	try {
-		//sh "docker rmi -f $(docker images -f 'dangling=true' -q)"
-		sh "docker rmi -f $(docker images -f dangling=true -q)"
-	} catch (err) {
-		echo "Trying to remove dangling Images: ${err}"
-	}
-	*/
-	
+	 try {
+	 //sh "docker rmi -f $(docker images -f 'dangling=true' -q)"
+	 sh "docker rmi -f $(docker images -f dangling=true -q)"
+	 } catch (err) {
+	 echo "Trying to remove dangling Images: ${err}"
+	 }
+	 */
+
 
 	try {
 		sh 'docker rmi -f $(docker images | grep ${artifactName} | awk \"{print $3}\")'
@@ -133,9 +133,9 @@ def removeImages(artifactName) {
 }
 
 //This stage installs all of the node dependencies, performs linting and builds the code.
-def npmBuild(branchName, repoUrl) {
+def npmBuild(applicationDir, branchName, repoUrl) {
 	//ng build generated 'dist' folder. To avoid putting 'dist' folder in  'demandplannerui'
-	dir('demandplannerui_npmbuild') {
+	dir(applicationDir) {
 		git branch: "${branchName}",
 		credentialsId: 'git-repo-ssh-access',
 		url: "${repoUrl}"
@@ -146,7 +146,7 @@ def npmBuild(branchName, repoUrl) {
 				npm install -g npm@5.6.0 @angular/cli@~1.7.3
 				npm install
 				ng build --prod --aot
-			'''   
+			'''
 	}
 }
 
