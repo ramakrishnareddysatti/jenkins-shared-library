@@ -1,3 +1,38 @@
+def sourceCodeCheckout(applicationDir, branchName, repoUrl, distroDirPath, distroRepoUrl) {
+	deleteDir()
+	echo "Checkout in progress..."
+	dir(applicationDir) {
+		git branch: "${branchName}",
+		credentialsId: 'git-repo-ssh-access',
+		url: "${repoUrl}"
+	}
+
+	// Check for directory
+	if(!fileExists(distroDirPath))
+	{
+		echo "${distroDirPath} doesn't exist.Continue cloning ..."
+
+		dir(distroDirPath){
+			git branch: 'master',
+			credentialsId: 'git-repo-ssh-access',
+			url: "${distroRepoUrl}"
+		}
+	}
+	else {
+		echo "${distroDirPath} is already exist.Continue updating ..."
+		sshagent (credentials: ['git-repo-ssh-access']) {
+			dir(distroDirPath) { sh "git pull origin HEAD:master" }
+		}
+	}
+}
+
+def build(applicationDir, artifactName, releasedVersion) {
+	dir(applicationDir) {
+		echo "Starting Docker Image Creation..."
+		sh "docker build -t ${artifactName}:${releasedVersion} ."
+		echo "Docker Image Creation Complted..."
+	}
+}
 
 def pushImageToRepo(applicationDir, distroDirPath, artifactName, releasedVersion) {
 	sh "docker images"
@@ -31,9 +66,11 @@ def tagBranch(repoUrl, releasedVersion) {
 }
 
 def saveImage(distroDirPath, artifactName, releasedVersion, destinationIP) {
-	timeout(activity: true, time: 20, unit: 'SECONDS') {
-		input message: 'Save to QA Env?', ok: 'Save'
-	}
+	/*
+	 timeout(activity: true, time: 20, unit: 'SECONDS') {
+	 input message: 'Save to QA Env?', ok: 'Save'
+	 }
+	 */
 	sh "scp -Cp ${distroDirPath}/${artifactName}-${releasedVersion}.tar centos@${destinationIP}:/home/centos"
 	// TODO: should move to load image method
 	sh "ssh -t centos@${destinationIP} 'ls && sudo docker load -i ${artifactName}-${releasedVersion}.tar' "
@@ -100,7 +137,6 @@ def getReleasedVersion(dirName) {
 def sendNotification(buildStatus) {
 	//def mailRecipients = 'r.satti@accenture.com, sashi.kumar.sharma@accenture.com, shresthi.garg@accenture.com, suresh.kumar.sahoo@accenture.com, s.b.jha@accenture.com';
 	def mailRecipients = 'r.satti@accenture.com'
-	echo "buildStatus: ${buildStatus}"
 
 	// build status of null means success
 	def buildStatusVar =  buildStatus ?: 'SUCCESS'
