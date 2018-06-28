@@ -120,7 +120,7 @@ def removeImages(artifactName) {
 	//sh 'docker image prune'
 
 	 sh 'docker rmi $(docker images --filter=reference="demandplannerui" -q)'
-	 
+	 sh 'docker images | grep "${artifactName}" | awk '{print $3}' | xargs -L1 docker rmi'	 
 	 //sh "docker rmi $(docker images --filter=reference=${artifactName} -q)"
 	 	//sh "docker rmi -f $(docker images | grep ${artifactName} | awk '{ print \\$3 }' )"
 		 //sh "docker rmi -f $(docker images | grep ${artifactName})"
