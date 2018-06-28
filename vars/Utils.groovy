@@ -120,14 +120,18 @@ def removeImages(artifactName) {
 	//sh 'docker image prune'
 
 	 //docker rmi $(docker images --filter=reference="*:stuff_*" -q)
-	 sh "docker rmi $(docker images --filter=reference=${artifactName} -q)"
+	 //sh "docker rmi $(docker images --filter=reference=${artifactName} -q)"
+	 	sh "docker rmi -f $(docker images | grep ${artifactName} | awk '{print \$3}')"
 
+		 //sh "ls -l /tmp/environment-creation-enhanced/ocp-groups/ | grep -v total | grep -v yaml | awk '{print \$9}' > ${groupListDir}/fileList"
+/*
 	try {
 		sh 'docker rmi -f $(docker images | grep ${artifactName} | awk \"{print $3}\")'
 		//sh "docker rmi -f $(docker images | grep ${artifactName} | awk '{print \$3}')"
 	} catch (err) {
 		echo "Trying remove ${artifactName}: ${err}"
 	}
+	*/
 }
 
 //This stage installs all of the node dependencies, performs linting and builds the code.
