@@ -34,35 +34,42 @@ def build(applicationDir, artifactName, releasedVersion) {
 	}
 }
 
+//Save one or more images to a tar archive.
 def pushImageToRepo(applicationDir, distroDirPath, artifactName, releasedVersion) {
-	sh "docker images"
-	dir (applicationDir) {
-		//docker save -o <path for generated tar file> <existing image name>
-		if (applicationDir == 'demandplannerapi') {
-			sh "docker save -o target/${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
-			echo "Copying demandplannerapi tar file..."
-			sh "cp -rf target/${artifactName}-${releasedVersion}.tar ${distroDirPath}"
-		} else if (applicationDir == 'demandplannerui') {
-			sh "docker save -o ${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
-			echo "Copying demandplannerui tar file..."
-			sh "cp -rf ${artifactName}-${releasedVersion}.tar ${distroDirPath}"
+	sshagent (credentials: ['git-repo-ssh-access']) {
+		sh "docker images"
+		dir (applicationDir) {
+			//docker save -o <path for generated tar file> <existing image name>
+			if (applicationDir == 'demandplannerapi') {
+				sh "docker save -o target/${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
+				echo "Copying demandplannerapi tar file..."
+				sh "cp -rf target/${artifactName}-${releasedVersion}.tar ${distroDirPath}"
+			} else if (applicationDir == 'demandplannerui') {
+				sh "docker save -o ${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
+				echo "Copying demandplannerui tar file..."
+				sh "cp -rf ${artifactName}-${releasedVersion}.tar ${distroDirPath}"
+			}
 		}
-	}
 
-	dir (distroDirPath) {
-		sh "git pull origin master"
-		sh "git add ${artifactName}-${releasedVersion}.tar"
-		sh 'git commit -m "Jenkins Job:${JOB_NAME} pushing image tar file" '
-		sh "git push origin HEAD:master"
+		dir (distroDirPath) {
+			sh "git pull origin master"
+			sh "git add ${artifactName}-${releasedVersion}.tar"
+			sh 'git commit -m "Jenkins Job:${JOB_NAME} pushing image tar file" '
+			sh "git push origin HEAD:master"
+		}
 	}
 }
 
-def tagBranch(repoUrl, releasedVersion) {
-	sh "ls -l"
-	sh "git remote set-url origin ${repoUrl}"
-	//sh "git tag ${IMAGE_BRANCH_PREFIX}-${BUILD_NUMBER}"
-	sh "git tag ${releasedVersion}-${BUILD_NUMBER}"
-	sh "git push --tags"
+def tagBranch(applicationDir, repoUrl, releasedVersion) {
+	sshagent (credentials: ['git-repo-ssh-access']) {
+		dir (applicationDir) {
+			sh "ls -l"
+			sh "git remote set-url origin ${repoUrl}"
+			//sh "git tag ${IMAGE_BRANCH_PREFIX}-${BUILD_NUMBER}"
+			sh "git tag ${releasedVersion}-${BUILD_NUMBER}"
+			sh "git push --tags"
+		}
+	}
 }
 
 def saveImage(distroDirPath, artifactName, releasedVersion, destinationIP) {
@@ -109,12 +116,15 @@ def deployUIToDev(artifactName, releasedVersion, PROP_ENV) {
 }
 
 def removeImages(artifactName) {
+	sh 'docker images -qf dangling=true | xargs --no-run-if-empty docker rmi'
+
+	/*
 	sh '''
-		if docker images -f "dangling=true" | grep ago --quiet; then
+		if docker images -f "dangling=true" then
 			docker rmi -f $(docker images -f "dangling=true" -q)
 		fi
 	'''
-	/*
+	
 	 try {
 	 //sh "docker rmi -f $(docker images -f 'dangling=true' -q)"
 	 sh "docker rmi -f $(docker images -f dangling=true -q)"
@@ -151,6 +161,7 @@ def npmBuild(applicationDir, branchName, repoUrl) {
 }
 
 def uiCodeQualityAnalysis(applicationDir) {
+	// Configure a webhook in your SonarQube server pointing to <your Jenkins instance>/sonarqube-webhook/
 	def sonarqubeScannerHome = tool 'SonarQubeScanner_V3'
 	dir(applicationDir) {
 		withSonarQubeEnv('SonarQube_V7') {
