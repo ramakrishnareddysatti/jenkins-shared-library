@@ -119,7 +119,7 @@ def removeImages(artifactName, tag) {
 	//sh 'docker images -a | awk '{print $3}' | grep 0.0'
 	//sh 'docker rmi -f $(docker images -a | grep ${artifactName} | grep ${tag} | awk \'{ print \$3 }\')'
 
-	sh 'docker images | grep "${artifactName}" | grep "${tag}" | awk \'{print $3}\' | xargs -L1 docker rmi'	 
+	sh 'docker images -a | grep "${artifactName}" | grep "${tag}" | awk \'{print $3}\' | xargs -L1 docker rmi'	 
 
 //----------- below two lines DO NOT DELETE. THEY ARE WORKING FINE.
 	//sh 'docker images -a | grep "<none>" | awk \'{print $3}\' | xargs -L1 docker rmi -f'
