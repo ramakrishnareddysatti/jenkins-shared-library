@@ -116,21 +116,15 @@ def deployUIToDev(artifactName, releasedVersion, PROP_ENV) {
 def removeImages(artifactName) {
 
 	sh 'docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi'
-	//sh "docker images -a | grep <none> | awk '{print $3}'
 
+//----------- below two lines DO NOT DELETE
 	//sh 'docker images -a | grep "<none>" | awk \'{print $3}\' | xargs -L1 docker rmi -f'
+	//sh 'docker images -a | grep "<none>" | awk \'{print $3}\' | xargs --no-run-if-empty docker rmi'
 	
-	sh 'docker images -a | grep "<none>" | awk \'{print $3}\' | xargs --no-run-if-empty docker rmi'
-	//sh 'docker image prune'
+
+
 	sh "docker ps --no-trunc -aqf 'name=${artifactName}' | xargs -I {} docker stop {}"
-	//sh 'docker images --no-trunc -qf "name=${artifactName}" | xargs --no-run-if-empty docker rmi'
-	//sh "docker rmi $(docker images --no-trunc -qf 'name=${artifactName}')"
-
-		sh (
-			script: "docker ps --no-trunc -aqf 'name=${artifactName}'",
-			returnStdout: true
-			).trim()
-
+	
 	 //sh 'docker images | grep "${artifactName}" | awk '{print $3}' | xargs -L1 docker rmi'	 
 	 //sh "docker rmi $(docker images --filter=reference=${artifactName} -q)"
 	 	//sh "docker rmi -f $(docker images | grep ${artifactName} | awk '{ print \\$3 }' )"
