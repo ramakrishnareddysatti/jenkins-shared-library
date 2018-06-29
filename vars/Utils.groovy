@@ -283,3 +283,4 @@ def removeImages(artifactName, tag) {
 	} catch(error) {
 		echo "Trying remove ${artifactName}: ${err}"
 	}
+}
