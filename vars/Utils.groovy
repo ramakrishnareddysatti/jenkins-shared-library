@@ -55,12 +55,11 @@ def pushImageToRepo(applicationDir, distroDirPath, artifactName, releasedVersion
 			}
 		}
 
-		echo "releasedVersion: ${releasedVersion}"
 		dir (distroDirPath) {
 			sh "git pull origin master"
 			//sh "git add ${artifactName}-${releasedVersion}.tar"
 			sh "git add ${artifactName}.tar"
-			sh 'git commit -m "Jenkins Job:${JOB_NAME} pushing image tar file releasedVersion:${releasedVersion}" '
+			sh 'git commit -m "Jenkins Job:${JOB_NAME} pushing image tar file" '
 			sh "git push origin HEAD:master"
 		}
 	}
