@@ -59,7 +59,7 @@ def pushImageToRepo(applicationDir, distroDirPath, artifactName, releasedVersion
 			sh "git pull origin master"
 			//sh "git add ${artifactName}-${releasedVersion}.tar"
 			sh "git add ${artifactName}.tar"
-			sh 'git commit -m "Jenkins Job:${JOB_NAME} pushing image tar file" '
+			sh 'git commit -m "Jenkins Job:${JOB_NAME} pushing image tar file released version:${releasedVersion}" '
 			sh "git push origin HEAD:master"
 		}
 	}
