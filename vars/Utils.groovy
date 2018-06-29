@@ -99,7 +99,7 @@ def tagBranch(applicationDir, repoUrl, releasedVersion) {
 	}
 }
 
-def loadImage(distroDirPath, artifactName, releasedVersion, destinationIP, PROP_ENV) {
+def loadImage(distroDirPath, artifactName, releasedVersion, destinationIP) {
 	/*
 	 timeout(activity: true, time: 20, unit: 'SECONDS') {
 	 input message: 'Save to QA Env?', ok: 'Save'
@@ -109,10 +109,12 @@ def loadImage(distroDirPath, artifactName, releasedVersion, destinationIP, PROP_
 	//sh "ssh -t centos@${destinationIP} 'ls && sudo docker load -i ${artifactName}-${releasedVersion}.tar' "
 	sh "scp -Cp ${distroDirPath}/${artifactName}.tar centos@${destinationIP}:/home/centos"
 	sh "ssh -t centos@${destinationIP} 'ls && sudo docker load -i ${artifactName}.tar' "
-	sh "ssh -t centos@${destinationIP} 'sudo docker run -e 'SPRING_PROFILES_ACTIVE=${PROP_ENV}' -d -p 8099:8090 --name ${artifactName} -t ${artifactName}' "
+	//sh "ssh -t centos@${destinationIP} 'sudo docker run -e 'SPRING_PROFILES_ACTIVE=${PROP_ENV}' -d -p 8099:8090 --name ${artifactName} -t ${artifactName}' "
 }
 
-
+def deployAPI(artifactName, releasedVersion, PROP_ENV, destinationIP) {
+	sh "ssh -t centos@${destinationIP} 'sudo docker run -e 'SPRING_PROFILES_ACTIVE=${PROP_ENV}' -d -p 8099:8090 --name ${artifactName} -t ${artifactName}' "
+}
 
 def deployAPIToDev(artifactName, releasedVersion, PROP_ENV) {
 	sh "docker ps"
