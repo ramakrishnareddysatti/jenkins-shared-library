@@ -41,19 +41,24 @@ def pushImageToRepo(applicationDir, distroDirPath, artifactName, releasedVersion
 		dir (applicationDir) {
 			//docker save -o <path for generated tar file> <existing image name>
 			if (applicationDir == 'demandplannerapi') {
-				sh "docker save -o target/${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
-				echo "Copying demandplannerapi tar file..."
-				sh "cp -rf target/${artifactName}-${releasedVersion}.tar ${distroDirPath}"
+				//sh "docker save -o target/${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
+				//sh "cp -rf target/${artifactName}-${releasedVersion}.tar ${distroDirPath}"
+				//echo "Copying demandplannerapi tar file..."
+				sh "docker save -o target/${artifactName}.tar ${artifactName}:${releasedVersion}"
+				sh "cp -rf target/${artifactName}.tar ${distroDirPath}"
 			} else if (applicationDir == 'demandplannerui') {
-				sh "docker save -o ${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
-				echo "Copying demandplannerui tar file..."
-				sh "cp -rf ${artifactName}-${releasedVersion}.tar ${distroDirPath}"
+				//sh "docker save -o ${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
+				//echo "Copying demandplannerui tar file..."
+				//sh "cp -rf ${artifactName}-${releasedVersion}.tar ${distroDirPath}"
+				sh "docker save -o ${artifactName}.tar ${artifactName}:${releasedVersion}"
+				sh "cp -rf ${artifactName}.tar ${distroDirPath}"
 			}
 		}
 
 		dir (distroDirPath) {
 			sh "git pull origin master"
-			sh "git add ${artifactName}-${releasedVersion}.tar"
+			//sh "git add ${artifactName}-${releasedVersion}.tar"
+			sh "git add ${artifactName}.tar"
 			sh 'git commit -m "Jenkins Job:${JOB_NAME} pushing image tar file" '
 			sh "git push origin HEAD:master"
 		}
@@ -113,70 +118,6 @@ def deployUIToDev(artifactName, releasedVersion, PROP_ENV) {
 	sh "docker run -d -p 8098:80 --name  ${artifactName} -t ${artifactName}:${releasedVersion}"
 }
 
-def removeImages(artifactName, tag) {
-
-	sh 'docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi'
-	//sh 'docker images -a | awk '{print $3}' | grep 0.0'
-	//sh 'docker rmi -f $(docker images -a | grep ${artifactName} | grep ${tag} | awk \'{ print \$3 }\')'
-
-	//sh 'docker images -a | grep \"${artifactName}\" | grep "${tag}" | awk \'{print $3}\' | xargs -L1 docker rmi'	 
-
-	//sh "docker images -a | grep \"${artifactName}\" | grep \"${tag}\" | awk '{print $3}' | xargs --no-run-if-empty docker rmi "
-
-	//sh "docker images -a | grep \"${artifactName}\" | grep \"${tag}\" | awk '{print $3}' | xargs --no-run-if-empty docker rmi "
-
-	def images, imagesWithTag, imageIdsWithTag
-
-	images = sh (
-			script: "docker images -a | grep \"${artifactName}\" ",
-			returnStdout: true
-			).trim()
-	
-	if (images != "") {
-		imagesWithTag = sh (
-			script: "docker images -a | grep \"${artifactName}\" | grep \"${tag}\" ",
-			returnStdout: true
-			).trim()
-	}
-
-	if (imagesWithTag != "") {
-		imageIdsWithTag = sh (
-			script: "docker images -a | grep \"${artifactName}\" | grep \"${tag}\" ",
-			returnStdout: true
-			).trim()
-	}
-
-	if (images != "" && imagesWithTag != "") {
-		//sh "docker images -a | grep \"${artifactName}\" | grep \"${tag}\" | awk '{print $3}' | xargs --no-run-if-empty docker rmi "
-		sh "docker images -a | grep \"${artifactName}\" | grep \"${tag}\" "
-	}
-
-
-//----------- below two lines DO NOT DELETE. THEY ARE WORKING FINE.
-	//sh 'docker images -a | grep "<none>" | awk \'{print $3}\' | xargs -L1 docker rmi -f'
-	//sh 'docker images -a | grep "<none>" | awk \'{print $3}\' | xargs --no-run-if-empty docker rmi'
-	
-
-
-	sh "docker ps --no-trunc -aqf 'name=${artifactName}' | xargs -I {} docker stop {}"
-	
-	 //sh 'docker images | grep "${artifactName}" | awk '{print $3}' | xargs -L1 docker rmi'	 
-	 //sh "docker rmi $(docker images --filter=reference=${artifactName} -q)"
-	 	//sh "docker rmi -f $(docker images | grep ${artifactName} | awk '{ print \\$3 }' )"
-		 //sh "docker rmi -f $(docker images | grep ${artifactName})"
-
-		 //docker rmi --force $(docker images | awk '/^<none>/ { print $3 }')
-
-		 //sh "ls -l /tmp/environment-creation-enhanced/ocp-groups/ | grep -v total | grep -v yaml | awk '{print \$9}' > ${groupListDir}/fileList"
-/*
-	try {
-		sh 'docker rmi -f $(docker images | grep ${artifactName} | awk \"{print $3}\")'
-		//sh "docker rmi -f $(docker images | grep ${artifactName} | awk '{print \$3}')"
-	} catch (err) {
-		echo "Trying remove ${artifactName}: ${err}"
-	}
-	*/
-}
 
 //This stage installs all of the node dependencies, performs linting and builds the code.
 def npmBuild(applicationDir, branchName, repoUrl) {
@@ -274,3 +215,73 @@ def sendNotification(buildStatus) {
 				)
 	}
 }
+
+def removeImages(artifactName, tag) {
+
+	try{
+		sh 'docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi'
+		//sh 'docker images -a | awk '{print $3}' | grep 0.0'
+		//sh 'docker rmi -f $(docker images -a | grep ${artifactName} | grep ${tag} | awk \'{ print \$3 }\')'
+
+		//sh 'docker images -a | grep \"${artifactName}\" | grep "${tag}" | awk \'{print $3}\' | xargs -L1 docker rmi'
+
+		//sh "docker images -a | grep \"${artifactName}\" | grep \"${tag}\" | awk '{print $3}' | xargs --no-run-if-empty docker rmi "
+
+		//sh "docker images -a | grep \"${artifactName}\" | grep \"${tag}\" | awk '{print $3}' | xargs --no-run-if-empty docker rmi "
+
+		def images, imagesWithTag, imageIdsWithTag
+
+		images = sh (
+		script: "docker images -a | grep \"${artifactName}\" ",
+		returnStdout: true
+		).trim()
+
+		if (images != "") {
+			imagesWithTag = sh (
+			script: "docker images -a | grep \"${artifactName}\" | grep \"${tag}\" ",
+			returnStdout: true
+			).trim()
+		}
+
+		if (imagesWithTag != "") {
+			imageIdsWithTag = sh (
+			script: "docker images -a | grep \"${artifactName}\" | grep \"${tag}\" ",
+			returnStdout: true
+			).trim()
+		}
+
+		if (images != "" && imagesWithTag != "") {
+			//sh "docker images -a | grep \"${artifactName}\" | grep \"${tag}\" | awk '{print $3}' | xargs --no-run-if-empty docker rmi "
+			sh "docker images -a | grep \"${artifactName}\" | grep \"${tag}\" | "
+		}
+
+
+		//----------- below two lines DO NOT DELETE. THEY ARE WORKING FINE.
+		//sh 'docker images -a | grep "<none>" | awk \'{print $3}\' | xargs -L1 docker rmi -f'
+		//sh 'docker images -a | grep "<none>" | awk \'{print $3}\' | xargs --no-run-if-empty docker rmi'
+
+
+
+		sh "docker ps --no-trunc -aqf 'name=${artifactName}' | xargs -I {} docker stop {}"
+
+		//sh 'docker images | grep "${artifactName}" | awk '{print $3}' | xargs -L1 docker rmi'
+		//sh "docker rmi $(docker images --filter=reference=${artifactName} -q)"
+		//sh "docker rmi -f $(docker images | grep ${artifactName} | awk '{ print \\$3 }' )"
+		//sh "docker rmi -f $(docker images | grep ${artifactName})"
+
+		//docker rmi --force $(docker images | awk '/^<none>/ { print $3 }')
+
+		//sh "ls -l /tmp/environment-creation-enhanced/ocp-groups/ | grep -v total | grep -v yaml | awk '{print \$9}' > ${groupListDir}/fileList"
+		/*
+		 try {
+		 sh 'docker rmi -f $(docker images | grep ${artifactName} | awk \"{print $3}\")'
+		 //sh "docker rmi -f $(docker images | grep ${artifactName} | awk '{print \$3}')"
+		 } catch (err) {
+		 echo "Trying remove ${artifactName}: ${err}"
+		 }
+		 */
+	} catch(catch (error) {
+		echo "Trying remove ${artifactName}: ${err}"
+		)
+
+	}
