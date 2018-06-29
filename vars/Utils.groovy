@@ -276,19 +276,21 @@ def sendNotification(buildStatus, isBuildPromotion) {
 	def buildFailureEmailSubject
 
 	if (isBuildPromotion.toBoolean()) {
-		buildSuccessEmailSubject = "JENKINS BUILD PROMOTION Notification : Successful Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'"
-		buildFailureEmailSubject = "JENKINS BUILD PROMOTION Notification : FAILED Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'"
+		echo 'true block'
+		buildSuccessEmailSubject = "JENKINS BUILD PROMOTION Notification : Successful Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' "
+		buildFailureEmailSubject = "JENKINS BUILD PROMOTION Notification : FAILED Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' "
 	} else
 	{
-		buildSuccessEmailSubject = "JENKINS Notification : Successful Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'"
-		buildFailureEmailSubject = "JENKINS Notification : FAILED Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'"
+		buildSuccessEmailSubject = "JENKINS Notification : Successful Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' "
+		buildFailureEmailSubject = "JENKINS Notification : FAILED Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' "
 	}
 
 	if (buildStatusVar == 'SUCCESS')
 	{
+		echo 'SUCCESS block'
 		// notify users when the build is back to normal
 		emailext(
-				subject: "${buildSuccessEmailSubject}",
+				subject: """ ${buildSuccessEmailSubject} """,
 				//  Generates beautiful email format. Since I didn't write the contents of "groovy-html.template", I am afraid to use
 				//body: '''${SCRIPT, template="groovy-html.template"}''',
 				body: """ <p>Successful: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]':</p><p>Check console output at "<a href="${env.BUILD_URL}">${env.JOB_NAME} [${env.BUILD_NUMBER}]</a>"</p>""",
@@ -299,9 +301,10 @@ def sendNotification(buildStatus, isBuildPromotion) {
 	}
 	else if (buildStatusVar == 'FAILURE')
 	{
+		echo 'FAILURE block'
 		// notify users when the Pipeline fails
 		emailext(
-				subject: "${buildFailureEmailSubject}",
+				subject: """ ${buildFailureEmailSubject} """,
 				//  Generates beautiful email format. Since I didn't write the contents of "groovy-html.template", I am afraid to use
 				//body: '''${SCRIPT, template="groovy-html.template"}''',
 				body: """ <p>FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]':</p><p>Check console output at "<a href="${env.BUILD_URL}">${env.JOB_NAME} [${env.BUILD_NUMBER}]</a>"</p>""",
