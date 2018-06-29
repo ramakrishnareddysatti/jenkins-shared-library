@@ -113,7 +113,7 @@ def loadImage(distroDirPath, artifactName, releasedVersion, destinationIP) {
 }
 
 def promoteAPIToEnv(artifactName, releasedVersion, PROP_ENV, destinationIP) {
-	sh "ssh -t centos@${destinationIP} 'sudo docker run -e 'SPRING_PROFILES_ACTIVE=${PROP_ENV}' -d -p 8099:8090 --name ${artifactName} -t ${artifactName}' "
+	sh "ssh -t centos@${destinationIP} 'sudo docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -d -p 8099:8090 --name ${artifactName} -t ${artifactName}' "
 }
 
 def deployAPIToDev(artifactName, releasedVersion, PROP_ENV) {
