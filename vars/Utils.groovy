@@ -28,7 +28,7 @@ def sourceCodeCheckout(applicationDir, branchName, repoUrl, distroDirPath, distr
 
 def distroCheckout(distroDirPath, distroRepoUrl) {
 	deleteDir()
-	
+
 	// Check for directory
 	if(!fileExists(distroDirPath))
 	{
@@ -113,8 +113,8 @@ def loadImage(distroDirPath, artifactName, releasedVersion, destinationIP) {
 
 def promoteAPIToEnv(artifactName, releasedVersion, PROP_ENV, destinationIP) {
 	sh """
-			ssh -t centos@${destinationIP} 'sudo docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker stop {} && sudo docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker rm {}'
-			ssh -t centos@${destinationIP} 'sudo docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -d -p 8099:8090 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
+			ssh -t centos@${destinationIP} 'sudo docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker stop {} && 
+			sudo docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker rm {} && sudo docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -d -p 8099:8090 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
 			"""
 }
 
@@ -267,5 +267,5 @@ def removeDanglingImages(artifactName, destinationIP) {
 			"""
 	} catch(error) {
 		echo "${error}"
-	}	
+	}
 }
