@@ -253,12 +253,16 @@ def removeImages(artifactName) {
 		sh 'docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi'
 		sh "docker ps --no-trunc -aqf 'name=${artifactName}' | xargs -I {} docker stop {}"
 	} catch(error) {
-		echo "Trying remove ${artifactName}: ${error}"
+		echo "${error}"
 	}
 }
 
 def removeDanglingImages(destinationIP) {
-	sh """
-		ssh -t centos@${destinationIP} 'sudo docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi'
-		"""
+	try{
+		sh """
+			ssh -t centos@${destinationIP} 'sudo docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi'
+			"""
+	} catch(error) {
+		echo "${error}"
+	}	
 }
