@@ -223,6 +223,6 @@ def removeImages(artifactName, tag) {
 		sh 'docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi'
 		sh "docker ps --no-trunc -aqf 'name=${artifactName}' | xargs -I {} docker stop {}"
 	} catch(error) {
-		echo "Trying remove ${artifactName}: ${err}"
+		echo "Trying remove ${artifactName}: ${error}"
 	}
 }
