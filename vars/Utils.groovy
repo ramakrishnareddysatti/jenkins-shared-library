@@ -258,7 +258,7 @@ def removeImages(artifactName) {
 }
 
 def removeDanglingImages(destinationIP) {
-	sh '''
+	sh """
 		ssh -t centos@${destinationIP} 'docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi'
-		'''
+		"""
 }
