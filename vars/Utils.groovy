@@ -112,18 +112,20 @@ def loadImage(distroDirPath, artifactName, releasedVersion, destinationIP) {
 }
 
 def promoteAPIToEnv(artifactName, releasedVersion, PROP_ENV, destinationIP) {
-	ssh -t centos@${destinationIP} << 'EOSSH'
-		def  containerId = sh (
-						script: "docker ps --no-trunc -aqf 'name=${artifactName}'",
-						returnStdout: true
-				).trim()
-	
-		if (containerId != "") {
-		sh "docker stop ${containerId}"
-		sh "docker rm -f ${containerId}"
-		}
-		sudo docker run -e 'SPRING_PROFILES_ACTIVE=${PROP_ENV}' -d -p 8099:8090 --name ${artifactName} -t ${artifactName}:${releasedVersion}
-	EOSSH
+	sh """
+		ssh -t centos@${destinationIP} << 'EOSSH'
+			def  containerId = sh (
+							script: "docker ps --no-trunc -aqf 'name=${artifactName}'",
+							returnStdout: true
+					).trim()
+		
+			if (containerId != "") {
+			sh "docker stop ${containerId}"
+			sh "docker rm -f ${containerId}"
+			}
+			sudo docker run -e 'SPRING_PROFILES_ACTIVE=${PROP_ENV}' -d -p 8099:8090 --name ${artifactName} -t ${artifactName}:${releasedVersion}
+		EOSSH
+	"""	
 
 /*
 	sh """
