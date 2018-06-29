@@ -26,6 +26,28 @@ def sourceCodeCheckout(applicationDir, branchName, repoUrl, distroDirPath, distr
 	}
 }
 
+def distroCheckout(distroDirPath, distroRepoUrl) {
+	deleteDir()
+	
+	// Check for directory
+	if(!fileExists(distroDirPath))
+	{
+		echo "${distroDirPath} doesn't exist.Continue cloning ..."
+
+		dir(distroDirPath){
+			git branch: 'master',
+			credentialsId: 'git-repo-ssh-access',
+			url: "${distroRepoUrl}"
+		}
+	}
+	else {
+		echo "${distroDirPath} is already exist.Continue updating ..."
+		sshagent (credentials: ['git-repo-ssh-access']) {
+			dir(distroDirPath) { sh "git pull origin HEAD:master" }
+		}
+	}
+}
+
 def uiDockerBuild(applicationDir, artifactName, releasedVersion) {
 	dir(applicationDir) {
 		echo "Starting Docker Image Creation..."
@@ -77,16 +99,20 @@ def tagBranch(applicationDir, repoUrl, releasedVersion) {
 	}
 }
 
-def saveImage(distroDirPath, artifactName, releasedVersion, destinationIP) {
+def loadImage(distroDirPath, artifactName, releasedVersion, destinationIP, PROP_ENV) {
 	/*
 	 timeout(activity: true, time: 20, unit: 'SECONDS') {
 	 input message: 'Save to QA Env?', ok: 'Save'
 	 }
 	 */
-	sh "scp -Cp ${distroDirPath}/${artifactName}-${releasedVersion}.tar centos@${destinationIP}:/home/centos"
-	// TODO: should move to load image method
-	sh "ssh -t centos@${destinationIP} 'ls && sudo docker load -i ${artifactName}-${releasedVersion}.tar' "
+	//sh "scp -Cp ${distroDirPath}/${artifactName}-${releasedVersion}.tar centos@${destinationIP}:/home/centos"
+	//sh "ssh -t centos@${destinationIP} 'ls && sudo docker load -i ${artifactName}-${releasedVersion}.tar' "
+	sh "scp -Cp ${distroDirPath}/${artifactName}.tar centos@${destinationIP}:/home/centos"
+	sh "ssh -t centos@${destinationIP} 'ls && sudo docker load -i ${artifactName}.tar' "
+	sh "ssh -t centos@${destinationIP} 'sudo docker run -e 'SPRING_PROFILES_ACTIVE=${PROP_ENV}' -d -p 8099:8090 --name ${artifactName} -t ${artifactName}' "
 }
+
+
 
 def deployAPIToDev(artifactName, releasedVersion, PROP_ENV) {
 	sh "docker ps"
@@ -216,7 +242,7 @@ def sendNotification(buildStatus) {
 	}
 }
 
-def removeImages(artifactName, tag) {
+def removeImages(artifactName) {
 
 	try{
 		sh 'docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi'
