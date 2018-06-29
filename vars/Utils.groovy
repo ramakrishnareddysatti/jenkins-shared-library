@@ -112,9 +112,14 @@ def loadImage(distroDirPath, artifactName, releasedVersion, destinationIP) {
 }
 
 def promoteAPIToEnv(artifactName, releasedVersion, PROP_ENV, destinationIP) {
+
+	/*
 	sh """
 		ssh -t centos@${destinationIP} << EOSSH
-			 def containerId = "sudo docker ps --no-trunc -aqf 'name=${artifactName}'"
+			def  containerId = sh (
+							script: "docker ps --no-trunc -aqf 'name=${artifactName}'",
+							returnStdout: true
+					).trim()
 		
 			if (containerId != "") {
 				sudo docker stop ${containerId}
@@ -123,22 +128,28 @@ def promoteAPIToEnv(artifactName, releasedVersion, PROP_ENV, destinationIP) {
 			sudo docker run -e 'SPRING_PROFILES_ACTIVE=${PROP_ENV}' -d -p 8099:8090 --name ${artifactName} -t ${artifactName}:${releasedVersion}
 		EOSSH
 	"""	
-
-/*
-	sh """
-			ssh -t centos@${destinationIP} 'sudo docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker stop {} && 
-			sudo docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker rm {} && 
-			sudo docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -d -p 8099:8090 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
-			"""
-			*/
+	*/
+	try{
+		sh """
+				ssh -t centos@${destinationIP} 'sudo docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker stop {} && 
+				sudo docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker rm {} && 
+				sudo docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -d -p 8099:8090 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
+				"""
+	} catch(error) {
+		echo "${error}"
+	}		
 }
 
 def promoteUIToEnv(artifactName, releasedVersion, PROP_ENV, destinationIP) {
-	sh """
-			ssh -t centos@${destinationIP} 'sudo docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker stop {} && 
-			sudo docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker rm {} && 
-			sudo docker run -d -p 8098:80 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
-		"""	
+	try{
+		sh """
+				ssh -t centos@${destinationIP} 'sudo docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker stop {} && 
+				sudo docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker rm {} && 
+				sudo docker run -d -p 8098:80 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
+			"""	
+	} catch(error) {
+		echo "${error}"
+	}		
 }
 
 def deployAPIToDev(artifactName, releasedVersion, PROP_ENV) {
