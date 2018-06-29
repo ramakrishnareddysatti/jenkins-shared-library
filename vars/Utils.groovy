@@ -265,6 +265,42 @@ def removeDanglingImages(artifactName, destinationIP) {
 	}
 }
 
+def sendNotification(buildStatus) {
+	//def mailRecipients = 'r.satti@accenture.com, sashi.kumar.sharma@accenture.com, shresthi.garg@accenture.com, suresh.kumar.sahoo@accenture.com, s.b.jha@accenture.com';
+	def mailRecipients = 'r.satti@accenture.com'
+
+	// build status of null means success
+	def buildStatusVar =  buildStatus ?: 'SUCCESS'
+	echo "buildStatusVar: ${buildStatusVar}"
+
+	if (buildStatusVar == 'SUCCESS')
+	{
+		// notify users when the build is back to normal
+		emailext(
+				subject: "JENKINS Notification : Successful Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
+				//  Generates beautiful email format. Since I didn't write the contents of "groovy-html.template", I am afraid to use
+				//body: '''${SCRIPT, template="groovy-html.template"}''',
+				body: """ <p>Successful: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]':</p><p>Check console output at "<a href="${env.BUILD_URL}">${env.JOB_NAME} [${env.BUILD_NUMBER}]</a>"</p>""",
+				recipientProviders: [culprits(), developers(), requestor(), brokenTestsSuspects(), brokenBuildSuspects(), upstreamDevelopers()],
+				to: "${mailRecipients}",
+				replyTo: "${mailRecipients}"
+				)
+	}
+	else if (buildStatusVar == 'FAILURE')
+	{
+		// notify users when the Pipeline fails
+		emailext(
+				subject: "JENKINS Notification : FAILED Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
+				//  Generates beautiful email format. Since I didn't write the contents of "groovy-html.template", I am afraid to use
+				//body: '''${SCRIPT, template="groovy-html.template"}''',
+				body: """ <p>FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]':</p><p>Check console output at "<a href="${env.BUILD_URL}">${env.JOB_NAME} [${env.BUILD_NUMBER}]</a>"</p>""",
+				recipientProviders: [culprits(), developers(), requestor(), brokenTestsSuspects(), brokenBuildSuspects(), upstreamDevelopers()],
+				to: "${mailRecipients}",
+				replyTo: "${mailRecipients}"
+				)
+	}
+}
+
 def sendNotification(buildStatus, isBuildPromotion) {
 	//def mailRecipients = 'r.satti@accenture.com, sashi.kumar.sharma@accenture.com, shresthi.garg@accenture.com, suresh.kumar.sahoo@accenture.com, s.b.jha@accenture.com';
 	def mailRecipients = 'r.satti@accenture.com'
@@ -276,7 +312,6 @@ def sendNotification(buildStatus, isBuildPromotion) {
 	def buildFailureEmailSubject
 
 	if (isBuildPromotion.toBoolean()) {
-		echo 'true block'
 		buildSuccessEmailSubject = "JENKINS BUILD PROMOTION Notification : Successful Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' "
 		buildFailureEmailSubject = "JENKINS BUILD PROMOTION Notification : FAILED Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' "
 	} else
@@ -287,7 +322,6 @@ def sendNotification(buildStatus, isBuildPromotion) {
 
 	if (buildStatusVar == 'SUCCESS')
 	{
-		echo 'SUCCESS block'
 		// notify users when the build is back to normal
 		emailext(
 				subject: """ ${buildSuccessEmailSubject} """,
