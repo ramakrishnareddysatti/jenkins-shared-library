@@ -58,20 +58,24 @@ def uiDockerBuild(applicationDir, artifactName, releasedVersion) {
 
 //Save one or more images to a tar archive.
 def pushImageToRepo(applicationDir, distroDirPath, artifactName, releasedVersion) {
+
+	echo "artifactName: ${artifactName}"
+	echo "releasedVersion: ${releasedVersion}"
 	sshagent (credentials: ['git-repo-ssh-access']) {
 		sh "docker images"
 		dir (applicationDir) {
 			//docker save -o <path for generated tar file> <existing image name>
 			if (applicationDir == 'demandplannerapi') {
 				sh "docker save -o target/${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
+				echo "Copying demandplannerapi tar file..."
 				sh "cp -rf target/${artifactName}-${releasedVersion}.tar ${distroDirPath}"
-				//echo "Copying demandplannerapi tar file..."
 				//sh "docker save -o target/${artifactName}.tar ${artifactName}:${releasedVersion}"
 				//sh "cp -rf target/${artifactName}.tar ${distroDirPath}"
 			} else if (applicationDir == 'demandplannerui') {
 				sh "docker save -o ${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
+				echo "Copying demandplannerui tar file..."
 				sh "cp -rf ${artifactName}-${releasedVersion}.tar ${distroDirPath}"
-				//echo "Copying demandplannerui tar file..."
+				
 				//sh "docker save -o ${artifactName}.tar ${artifactName}:${releasedVersion}"
 				//sh "cp -rf ${artifactName}.tar ${distroDirPath}"
 			}
@@ -86,6 +90,48 @@ def pushImageToRepo(applicationDir, distroDirPath, artifactName, releasedVersion
 		}
 	}
 }
+
+//Save one or more images to a tar archive.
+def saveImageToFS(applicationDir, distroDirPath, artifactName, releasedVersion) {
+
+	echo "artifactName: ${artifactName}"
+	echo "releasedVersion: ${releasedVersion}"
+	sshagent (credentials: ['git-repo-ssh-access']) {
+		sh "docker images"
+		dir (applicationDir) {
+			//docker save -o <path for generated tar file> <existing image name>
+			if (applicationDir == 'demandplannerapi') {
+				sh "docker save -o target/${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
+				echo "Copying demandplannerapi tar file..."
+				sh "cp -rf target/${artifactName}-${releasedVersion}.tar ${distroDirPath}"
+				//sh "docker save -o target/${artifactName}.tar ${artifactName}:${releasedVersion}"
+				//sh "cp -rf target/${artifactName}.tar ${distroDirPath}"
+			} else if (applicationDir == 'demandplannerui') {
+				sh "docker save -o ${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
+				echo "Copying demandplannerui tar file..."
+				sh "cp -rf ${artifactName}-${releasedVersion}.tar ${distroDirPath}"
+				
+				//sh "docker save -o ${artifactName}.tar ${artifactName}:${releasedVersion}"
+				//sh "cp -rf ${artifactName}.tar ${distroDirPath}"
+			}
+		}
+	}
+}
+
+def saveImageToRepo(applicationDir, distroDirPath, artifactName, releasedVersion) {
+	echo "artifactName: ${artifactName}"
+	echo "releasedVersion: ${releasedVersion}"
+	sshagent (credentials: ['git-repo-ssh-access']) {
+		dir (distroDirPath) {
+			sh "git pull origin master"
+			sh "git add ${artifactName}-${releasedVersion}.tar"
+			//sh "git add ${artifactName}.tar"
+			sh 'git commit -m "Jenkins Job:${JOB_NAME} pushing image tar file" '
+			sh "git push origin HEAD:master"
+		}
+	}
+}
+
 
 def tagBranch(applicationDir, repoUrl, releasedVersion) {
 	sshagent (credentials: ['git-repo-ssh-access']) {
@@ -138,6 +184,7 @@ def promoteUIToEnv(artifactName, releasedVersion, PROP_ENV, destinationIP) {
 }
 
 def deployAPIToDev(artifactName, releasedVersion, PROP_ENV) {
+	echo "releasedVersion in deployAPIToDev: ${releasedVersion}"
 	sh "docker ps"
 	def  containerId = sh (
 			script: "docker ps --no-trunc -aqf 'name=${artifactName}'",
