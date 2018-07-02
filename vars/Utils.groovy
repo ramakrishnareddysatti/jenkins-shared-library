@@ -114,9 +114,9 @@ def loadImage(distroDirPath, artifactName, releasedVersion, destinationIP) {
 def promoteAPIToEnv(artifactName, releasedVersion, PROP_ENV, destinationIP) {
 	try{
 		sh """
-				ssh -t centos@${destinationIP} 'sudo docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker stop {} && 
-				sudo docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker rm {} && 
-				sudo docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -d -p 8099:8090 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
+				ssh -t centos@${destinationIP} 'sudo su && docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker stop {} && 
+				docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker rm {} && 
+				docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -d -p 8099:8090 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
 				"""
 	} catch(error) {
 		echo "ERROR:${error}"
@@ -126,9 +126,9 @@ def promoteAPIToEnv(artifactName, releasedVersion, PROP_ENV, destinationIP) {
 def promoteUIToEnv(artifactName, releasedVersion, PROP_ENV, destinationIP) {
 	try{
 		sh """
-				ssh -t centos@${destinationIP} 'sudo docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker stop {} && 
-				sudo docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker rm {} && 
-				sudo docker run -d -p 8098:80 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
+				ssh -t centos@${destinationIP} 'sudo su && docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker stop {} && 
+				docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker rm {} && 
+				docker run -d -p 8098:80 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
 			"""
 	} catch(error) {
 		echo "ERROR:${error}"
@@ -241,7 +241,7 @@ def removeImages(artifactName) {
 def removeDanglingImages(artifactName, destinationIP) {
 	try{
 		sh """
-			ssh -t centos@${destinationIP} 'sudo docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi' 
+			ssh -t centos@${destinationIP} 'sudo su && docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi' 
 			"""
 	} catch(error) {
 		echo "${error}"
