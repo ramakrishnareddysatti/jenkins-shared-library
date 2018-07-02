@@ -108,7 +108,7 @@ def loadImage(distroDirPath, artifactName, releasedVersion, destinationIP) {
 	//sh "scp -Cp ${distroDirPath}/${artifactName}-${releasedVersion}.tar centos@${destinationIP}:/home/centos"
 	//sh "ssh -t centos@${destinationIP} 'ls && sudo docker load -i ${artifactName}-${releasedVersion}.tar' "
 	sh "scp -Cp ${distroDirPath}/${artifactName}.tar centos@${destinationIP}:/home/centos"
-	sh "ssh -t centos@${destinationIP} 'ls && sudo docker load -i ${artifactName}.tar' "
+	sh "ssh -t centos@${destinationIP} 'ls && sudo su && docker load -i ${artifactName}.tar' "
 }
 
 def promoteAPIToEnv(artifactName, releasedVersion, PROP_ENV, destinationIP) {
