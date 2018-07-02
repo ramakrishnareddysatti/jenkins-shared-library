@@ -252,7 +252,9 @@ def removeDanglingImages(artifactName, destinationIP) {
 def sendNotification(buildStatus) {
 	//def mailRecipients = 'r.satti@accenture.com, sashi.kumar.sharma@accenture.com, shresthi.garg@accenture.com, suresh.kumar.sahoo@accenture.com, s.b.jha@accenture.com';
 	def mailRecipients = 'r.satti@accenture.com'
-
+	
+	sh 'hostname'
+	
 	// build status of null means success
 	def buildStatusVar =  buildStatus ?: 'SUCCESS'
 	echo "buildStatusVar: ${buildStatusVar}"
