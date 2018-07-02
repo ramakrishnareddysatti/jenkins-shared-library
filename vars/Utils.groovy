@@ -117,7 +117,7 @@ def promoteAPIToEnv(artifactName, releasedVersion, PROP_ENV, destinationIP) {
 				ssh -t centos@${destinationIP} 'sudo docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker stop {} && 
 				sudo docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker rm {} && 
 				sudo docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -d -p 8099:8090 --name ${artifactName} -t ${artifactName}:${releasedVersion} &&
-				exit'
+				logout'
 				"""
 	} catch(error) {
 		echo "ERROR:${error}"
@@ -253,8 +253,11 @@ def sendNotification(buildStatus) {
 	//def mailRecipients = 'r.satti@accenture.com, sashi.kumar.sharma@accenture.com, shresthi.garg@accenture.com, suresh.kumar.sahoo@accenture.com, s.b.jha@accenture.com';
 	def mailRecipients = 'r.satti@accenture.com'
 	
-	sh 'hostname'
-	
+	sh 'env > env.txt' 
+	for (String i : readFile('env.txt').split("\r?\n")) {
+		println i
+	}
+
 	// build status of null means success
 	def buildStatusVar =  buildStatus ?: 'SUCCESS'
 	echo "buildStatusVar: ${buildStatusVar}"
