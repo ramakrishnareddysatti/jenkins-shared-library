@@ -108,7 +108,7 @@ def loadImage(distroDirPath, artifactName, releasedVersion, destinationIP) {
 	//sh "scp -Cp ${distroDirPath}/${artifactName}-${releasedVersion}.tar centos@${destinationIP}:/home/centos"
 	//sh "ssh -t centos@${destinationIP} 'ls && sudo docker load -i ${artifactName}-${releasedVersion}.tar' "
 	removeDanglingImages(artifactName, destinationIP)
-	sh "scp -Cp ${distroDirPath}/${artifactName}.tar centos@${destinationIP}:/home/centos"
+	sh "scp -Cp ${distroDirPath}/${artifactName}.tar centos@${destinationIP}:/home/centos/"
 	sh "ssh -t centos@${destinationIP} 'ls && sudo su && docker load -i ${artifactName}.tar' "
 }
 
@@ -242,7 +242,7 @@ def removeImages(artifactName) {
 def removeDanglingImages(artifactName, destinationIP) {
 	try{
 		sh """
-			ssh -t centos@${destinationIP} 'pwd && ls && rm ${artifactName} && sudo su && docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi' 
+			ssh -t centos@${destinationIP} 'rm ${artifactName}.tar && sudo su && docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi' 
 
 			"""
 	} catch(error) {
