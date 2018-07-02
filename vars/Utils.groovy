@@ -63,24 +63,24 @@ def pushImageToRepo(applicationDir, distroDirPath, artifactName, releasedVersion
 		dir (applicationDir) {
 			//docker save -o <path for generated tar file> <existing image name>
 			if (applicationDir == 'demandplannerapi') {
-				//sh "docker save -o target/${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
-				//sh "cp -rf target/${artifactName}-${releasedVersion}.tar ${distroDirPath}"
+				sh "docker save -o target/${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
+				sh "cp -rf target/${artifactName}-${releasedVersion}.tar ${distroDirPath}"
 				//echo "Copying demandplannerapi tar file..."
-				sh "docker save -o target/${artifactName}.tar ${artifactName}:${releasedVersion}"
-				sh "cp -rf target/${artifactName}.tar ${distroDirPath}"
+				//sh "docker save -o target/${artifactName}.tar ${artifactName}:${releasedVersion}"
+				//sh "cp -rf target/${artifactName}.tar ${distroDirPath}"
 			} else if (applicationDir == 'demandplannerui') {
-				//sh "docker save -o ${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
+				sh "docker save -o ${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
+				sh "cp -rf ${artifactName}-${releasedVersion}.tar ${distroDirPath}"
 				//echo "Copying demandplannerui tar file..."
-				//sh "cp -rf ${artifactName}-${releasedVersion}.tar ${distroDirPath}"
-				sh "docker save -o ${artifactName}.tar ${artifactName}:${releasedVersion}"
-				sh "cp -rf ${artifactName}.tar ${distroDirPath}"
+				//sh "docker save -o ${artifactName}.tar ${artifactName}:${releasedVersion}"
+				//sh "cp -rf ${artifactName}.tar ${distroDirPath}"
 			}
 		}
 
 		dir (distroDirPath) {
 			sh "git pull origin master"
-			//sh "git add ${artifactName}-${releasedVersion}.tar"
-			sh "git add ${artifactName}.tar"
+			sh "git add ${artifactName}-${releasedVersion}.tar"
+			//sh "git add ${artifactName}.tar"
 			sh 'git commit -m "Jenkins Job:${JOB_NAME} pushing image tar file" '
 			sh "git push origin HEAD:master"
 		}
@@ -93,7 +93,7 @@ def tagBranch(applicationDir, repoUrl, releasedVersion) {
 			sh "ls -l"
 			sh "git remote set-url origin ${repoUrl}"
 			//sh "git tag ${IMAGE_BRANCH_PREFIX}-${BUILD_NUMBER}"
-			sh "git tag ${releasedVersion}-${BUILD_NUMBER}"
+			sh "git tag ${releasedVersion}"
 			sh "git push --tags"
 		}
 	}
@@ -105,11 +105,12 @@ def loadImage(distroDirPath, artifactName, releasedVersion, destinationIP) {
 	 input message: 'Save to QA Env?', ok: 'Save'
 	 }
 	 */
-	//sh "scp -Cp ${distroDirPath}/${artifactName}-${releasedVersion}.tar centos@${destinationIP}:/home/centos"
-	//sh "ssh -t centos@${destinationIP} 'ls && sudo docker load -i ${artifactName}-${releasedVersion}.tar' "
 	removeDanglingImages(artifactName, destinationIP)
-	sh "scp -Cp ${distroDirPath}/${artifactName}.tar centos@${destinationIP}:/home/centos/"
-	sh "ssh -t centos@${destinationIP} 'ls && sudo su && docker load -i ${artifactName}.tar' "
+	sh "scp -Cp ${distroDirPath}/${artifactName}-${releasedVersion}.tar centos@${destinationIP}:/home/centos"
+	sh "ssh -t centos@${destinationIP} 'ls && sudo docker load -i ${artifactName}-${releasedVersion}.tar' "
+	
+	//sh "scp -Cp ${distroDirPath}/${artifactName}.tar centos@${destinationIP}:/home/centos/"
+	//sh "ssh -t centos@${destinationIP} 'ls && sudo su && docker load -i ${artifactName}.tar' "
 }
 
 def promoteAPIToEnv(artifactName, releasedVersion, PROP_ENV, destinationIP) {
