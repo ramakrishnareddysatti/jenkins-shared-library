@@ -130,13 +130,13 @@ def saveImageToRepo(applicationDir, distroDirPath, artifactName, releasedVersion
 }
 
 
-def tagBranch(applicationDir, repoUrl, releasedVersion) {
+def tagBranch(applicationDir, repoUrl, taggedVersion) {
 	sshagent (credentials: ['git-repo-ssh-access']) {
 		dir (applicationDir) {
 			sh "ls -l"
 			sh "git remote set-url origin ${repoUrl}"
 			//sh "git tag ${IMAGE_BRANCH_PREFIX}-${BUILD_NUMBER}"
-			sh "git tag ${releasedVersion}"
+			sh "git tag ${taggedVersion}"
 			sh "git push --tags"
 		}
 	}
