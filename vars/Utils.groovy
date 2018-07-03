@@ -75,7 +75,7 @@ def pushImageToRepo(applicationDir, distroDirPath, artifactName, releasedVersion
 				sh "docker save -o ${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
 				echo "Copying demandplannerui tar file..."
 				sh "cp -rf ${artifactName}-${releasedVersion}.tar ${distroDirPath}"
-				
+
 				//sh "docker save -o ${artifactName}.tar ${artifactName}:${releasedVersion}"
 				//sh "cp -rf ${artifactName}.tar ${distroDirPath}"
 			}
@@ -93,9 +93,6 @@ def pushImageToRepo(applicationDir, distroDirPath, artifactName, releasedVersion
 
 //Save one or more images to a tar archive.
 def saveImageToFS(applicationDir, distroDirPath, artifactName, releasedVersion) {
-
-	echo "artifactName: ${artifactName}"
-	echo "releasedVersion: ${releasedVersion}"
 	sshagent (credentials: ['git-repo-ssh-access']) {
 		sh "docker images"
 		dir (applicationDir) {
@@ -110,7 +107,7 @@ def saveImageToFS(applicationDir, distroDirPath, artifactName, releasedVersion) 
 				sh "docker save -o ${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
 				echo "Copying demandplannerui tar file..."
 				sh "cp -rf ${artifactName}-${releasedVersion}.tar ${distroDirPath}"
-				
+
 				//sh "docker save -o ${artifactName}.tar ${artifactName}:${releasedVersion}"
 				//sh "cp -rf ${artifactName}.tar ${distroDirPath}"
 			}
@@ -154,7 +151,7 @@ def loadImage(distroDirPath, artifactName, releasedVersion, destinationIP) {
 	removeDanglingImages(artifactName, destinationIP)
 	sh "scp -Cp ${distroDirPath}/${artifactName}-${releasedVersion}.tar centos@${destinationIP}:/home/centos"
 	sh "ssh -t centos@${destinationIP} 'ls && sudo docker load -i ${artifactName}-${releasedVersion}.tar' "
-	
+
 	//sh "scp -Cp ${distroDirPath}/${artifactName}.tar centos@${destinationIP}:/home/centos/"
 	//sh "ssh -t centos@${destinationIP} 'ls && sudo su && docker load -i ${artifactName}.tar' "
 }
@@ -234,7 +231,7 @@ def npmBuild(applicationDir, branchName, repoUrl) {
 }
 
 def uiCodeQualityAnalysis(applicationDir) {
-	// Configure a webhook in your SonarQube server pointing to <your Jenkins instance>/sonarqube-webhook/
+	//********* Configure a webhook in your SonarQube server pointing to <your Jenkins instance>/sonarqube-webhook/ ********
 	def sonarqubeScannerHome = tool 'SonarQubeScanner_V3'
 	dir(applicationDir) {
 		withSonarQubeEnv('SonarQube_V7') {
@@ -276,19 +273,19 @@ def getReleasedVersion(dirName) {
 	matcher ? matcher[0][1] : null
 }
 
-
+// TODO: Throughly validate
 def removeImages(artifactName) {
 
 	try{
 		sh "docker ps --no-trunc -aqf 'name=${artifactName}' | xargs -I {} docker stop {}"
 		sh 'docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi'
 		sh "docker images | grep SNAPSHOT | tr -s ' ' | cut -d ' ' -f 3 | xargs --no-run-if-empty docker rmi"
-		
+
 	} catch(error) {
 		echo "${error}"
 	}
 }
-
+// TODO: Throughly validate
 def removeDanglingImages(artifactName, destinationIP) {
 	try{
 		sh """
@@ -304,13 +301,13 @@ def removeDanglingImages(artifactName, destinationIP) {
 def sendNotification(buildStatus) {
 	//def mailRecipients = 'r.satti@accenture.com, sashi.kumar.sharma@accenture.com, shresthi.garg@accenture.com, suresh.kumar.sahoo@accenture.com, s.b.jha@accenture.com';
 	def mailRecipients = 'r.satti@accenture.com'
-	
+
 	/* PRINT ALL ENVIRONMENT VARIABLES
-		sh 'env > env.txt' 
-		for (String i : readFile('env.txt').split("\r?\n")) {
-			println i
-		}
-	*/
+	 sh 'env > env.txt'
+	 for (String i : readFile('env.txt').split("\r?\n")) {
+	 println i
+	 }
+	 */
 
 	// build status of null means success
 	def buildStatusVar =  buildStatus ?: 'SUCCESS'
