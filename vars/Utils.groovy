@@ -300,7 +300,7 @@ def removeDanglingImages(artifactName, destinationIP) {
 
 def sendNotification(buildStatus) {
 	//def mailRecipients = 'r.satti@accenture.com, sashi.kumar.sharma@accenture.com, shresthi.garg@accenture.com, suresh.kumar.sahoo@accenture.com, s.b.jha@accenture.com';
-	def mailRecipients = 'r.satti@accenture.com'
+	def mailRecipients = 'r.satti@accenture.com, suresh.kumar.sahoo@accenture.com'
 
 	/* PRINT ALL ENVIRONMENT VARIABLES
 	 sh 'env > env.txt'
