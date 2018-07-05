@@ -166,13 +166,15 @@ def loadImage(distroDirPath, artifactName, releasedVersion, destinationIP) {
 	 input message: 'Save to QA Env?', ok: 'Save'
 	 }
 	 */
-	 // To Remove SNAPSHOT TAR Files
-	try {
-		sh "ssh centos@${destinationIP} 'ls && rm *SNAPSHOT*.tar ' "
-	} catch(error) {
-		echo "${error}"
-	}
-
+	 
+	   // BE CAREFUL WHILE DOING THIS. IT'S GOING TO REMOVE ALL THE *PREVIOUS* TAR(UI AND API) FILES
+		// To Remove SNAPSHOT TAR Files
+		try {
+			sh "ssh centos@${destinationIP} 'ls && rm *${artifactName}*.tar ' "
+		} catch(error) {
+			echo "${error}"
+		}
+	
 	sh "scp -Cp ${distroDirPath}/${artifactName}-${releasedVersion}.tar centos@${destinationIP}:/home/centos"
 	sh "ssh centos@${destinationIP} 'ls && sudo docker load -i ${artifactName}-${releasedVersion}.tar' "
 
