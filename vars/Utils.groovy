@@ -80,17 +80,18 @@ def sourceCodeCheckout(applicationDir, branchName, repoUrl, distroDirPath, distr
  *
  */
 def removeDanglingImages(artifactName, serverIP) {
+	// docker images | grep SNAPSHOT
 	try{
 		sh """
 			ssh centos@${serverIP} 'sudo su && docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi && 
-			docker images | grep SNAPSHOT | tr -s " " | cut -d " " -f 3 | xargs --no-run-if-empty docker rmi' 
+			docker images | grep demandplanner | tr -s " " | cut -d " " -f 3 | xargs --no-run-if-empty docker rmi' 
 			"""
 	} catch(error) {
 		echo "${error}"
 	}
 }
 
-def saveImage(applicationDir, distroDirPath, artifactName, releasedVersion,GIT_IMAGE_PUSH) {
+def saveImage(applicationDir, distroDirPath, artifactName, releasedVersion, GIT_IMAGE_PUSH) {
 		if (GIT_IMAGE_PUSH.toBoolean()) {
 			echo "Save Image to Tar Archive and pushing Tar to Git Repo"
 			saveImageToFS(applicationDir, distroDirPath, artifactName, releasedVersion)
@@ -165,8 +166,15 @@ def loadImage(distroDirPath, artifactName, releasedVersion, destinationIP) {
 	 input message: 'Save to QA Env?', ok: 'Save'
 	 }
 	 */
+	 // To Remove SNAPSHOT TAR Files
+	try {
+		sh "ssh centos@${destinationIP} 'ls && rm *SNAPSHOT*.tar ' "
+	} catch(error) {
+		echo "${error}"
+	}
+
 	sh "scp -Cp ${distroDirPath}/${artifactName}-${releasedVersion}.tar centos@${destinationIP}:/home/centos"
-	sh "ssh -t centos@${destinationIP} 'ls && sudo docker load -i ${artifactName}-${releasedVersion}.tar' "
+	sh "ssh centos@${destinationIP} 'ls && sudo docker load -i ${artifactName}-${releasedVersion}.tar' "
 
 	//sh "scp -Cp ${distroDirPath}/${artifactName}.tar centos@${destinationIP}:/home/centos/"
 	//sh "ssh -t centos@${destinationIP} 'ls && sudo su && docker load -i ${artifactName}.tar' "
@@ -206,7 +214,7 @@ def uiCodeQualityAnalysis(applicationDir) {
 	def sonarqubeScannerHome = tool 'SonarQubeScanner_V3'
 	dir(applicationDir) {
 		withSonarQubeEnv('SonarQube_V7') {
-			sh 'ls -l'
+			sh 'ls -la'
 			sh "${sonarqubeScannerHome}/bin/sonar-scanner" +
 					" -Dsonar.projectKey=demandplannerui" +
 					" -Dsonar.sources=src" +
