@@ -82,7 +82,7 @@ def sourceCodeCheckout(applicationDir, branchName, repoUrl, distroDirPath, distr
 def removeDanglingImages(artifactName, serverIP) {
 	try{
 		sh """
-			ssh -t centos@${serverIP} 'sudo su && docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi && 
+			ssh centos@${serverIP} 'sudo su && docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi && 
 			docker images | grep SNAPSHOT | tr -s " " | cut -d " " -f 3 | xargs --no-run-if-empty docker rmi' 
 			"""
 	} catch(error) {
@@ -139,7 +139,7 @@ def saveImageToRepo(applicationDir, distroDirPath, artifactName, releasedVersion
 def stopContainer(artifactName, serverIP) {
 	try{
 		sh """
-			ssh -t centos@${serverIP} 'sudo su && docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker stop {} &&
+			ssh centos@${serverIP} 'sudo su && docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker stop {} &&
 			docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker rm {}' 
 			"""
 	} catch(error) {
@@ -163,7 +163,7 @@ def loadImage(distroDirPath, artifactName, releasedVersion, destinationIP) {
 def promoteAPIToEnv(artifactName, releasedVersion, PROP_ENV, destinationIP) {
 	try{
 		sh """
-				ssh -t centos@${destinationIP} 'sudo su &&  docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -d -p 8099:8090 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
+				ssh centos@${destinationIP} 'sudo su &&  docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -d -p 8099:8090 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
 				"""
 	} catch(error) {
 		echo "ERROR:${error}"
@@ -252,7 +252,7 @@ def pushImageToRepo(applicationDir, distroDirPath, artifactName, releasedVersion
 def promoteUIToEnv(artifactName, releasedVersion, PROP_ENV, destinationIP) {
 	try{
 		sh """
-				ssh -t centos@${destinationIP} 'sudo su && docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker stop {} && 
+				ssh centos@${destinationIP} 'sudo su && docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker stop {} && 
 				docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker rm {} && 
 				docker run -d -p 8098:80 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
 			"""
