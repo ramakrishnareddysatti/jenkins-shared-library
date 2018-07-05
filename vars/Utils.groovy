@@ -292,20 +292,21 @@ def sendNotification(buildStatus) {
 	}
 }
 
-/* ################################  UNUSED Methods. Please Verify before DELETE ############################### */
-
 // TODO: Throughly validate
 def removeImages(artifactName) {
 
 	try{
-		sh "docker ps --no-trunc -aqf 'name=${artifactName}' | xargs -I {} docker stop {}"
-		sh 'docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi'
-		sh "docker images | grep SNAPSHOT | tr -s ' ' | cut -d ' ' -f 3 | xargs --no-run-if-empty docker rmi"
-
+		//sh "docker ps --no-trunc -aqf 'name=${artifactName}' | xargs -I {} docker stop {}"
+		sh """
+			sudo su && docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi && 
+			docker images | grep SNAPSHOT | tr -s ' ' | cut -d ' ' -f 3 | xargs --no-run-if-empty docker rmi
+		"""
 	} catch(error) {
 		echo "${error}"
 	}
 }
+
+/* ################################  UNUSED Methods. Please Verify before DELETE ############################### */
 def distroCheckout(distroDirPath, distroRepoUrl) {
 	deleteDir()
 
