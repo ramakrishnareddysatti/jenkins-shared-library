@@ -8,9 +8,15 @@ def commonAppCheckout(applicationDir, commonRepoUrl, branchName) {
 	}
 }
 
+// Using in Common Application Jenkins file
+def getReleasedVersion(applicationDir) {
+	def matcher = readFile("${applicationDir}/pom.xml") =~ '<version>(.+?)</version>'
+	matcher ? matcher[0][1] : null
+}
 
-def getReleasedVersion(dirName) {
-	def matcher = readFile("${dirName}/pom.xml") =~ '<version>(.+?)</version>'
+// Using in DP API Application Jenkins file
+def getArtifact(applicationDir) {
+	def matcher = readFile("${applicationDir}/pom.xml") =~ '<artifactId>(.+?)</artifactId>'
 	matcher ? matcher[0][1] : null
 }
 
@@ -27,15 +33,6 @@ def processQualityGate() {
 		}
 	}
 }
-
-def sonarScanner(applicationDir) {
-	//********* Configure a webhook in your SonarQube server pointing to <your Jenkins instance>/sonarqube-webhook/ ********
-	dir(applicationDir) {
-		withSonarQubeEnv('SonarQube_V7') { // SonarQube taskId is automatically attached to the pipeline context
-			sh "mvn org.sonarsource.scanner.maven:sonar-maven-plugin:3.3.0.603:sonar" }
-	}
-}
-
 
 def tagBranch(applicationDir, repoUrl, taggedVersion) {
 	sshagent (credentials: ['git-repo-ssh-access']) {
@@ -77,6 +74,115 @@ def sourceCodeCheckout(applicationDir, branchName, repoUrl, distroDirPath, distr
 	}
 }
 
+// TODO: Throughly validate
+/*
+ * Responsible to remove "dangling images" and application "SNAPSHOT" images (if exists).
+ *
+ */
+def removeDanglingImages(artifactName, serverIP) {
+	try{
+		sh """
+			ssh -t centos@${serverIP} 'sudo su && docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi && 
+			docker images | grep SNAPSHOT | tr -s " " | cut -d " " -f 3 | xargs --no-run-if-empty docker rmi' 
+			"""
+	} catch(error) {
+		echo "${error}"
+	}
+}
+
+/*
+ * Save one or more images to a tar archive and copy to distro path.
+ */
+def saveImageToFS(applicationDir, distroDirPath, artifactName, releasedVersion) {
+	sshagent (credentials: ['git-repo-ssh-access']) {
+		sh "docker images"
+		dir (applicationDir) {
+			//docker save -o <path for generated tar file> <existing image name>
+			if (applicationDir == 'demandplannerapi') {
+				sh "docker save -o target/${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
+				echo "Copying demandplannerapi tar file..."
+				sh "cp -rf target/${artifactName}-${releasedVersion}.tar ${distroDirPath}"
+				//sh "docker save -o target/${artifactName}.tar ${artifactName}:${releasedVersion}"
+				//sh "cp -rf target/${artifactName}.tar ${distroDirPath}"
+			} else if (applicationDir == 'demandplannerui') {
+				sh "docker save -o ${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
+				echo "Copying demandplannerui tar file..."
+				sh "cp -rf ${artifactName}-${releasedVersion}.tar ${distroDirPath}"
+
+				//sh "docker save -o ${artifactName}.tar ${artifactName}:${releasedVersion}"
+				//sh "cp -rf ${artifactName}.tar ${distroDirPath}"
+			}
+		}
+	}
+}
+
+/*
+ * Save one or more images to a tar archive and push to repo.
+ */
+def saveImageToRepo(applicationDir, distroDirPath, artifactName, releasedVersion) {
+	echo "artifactName: ${artifactName}"
+	echo "releasedVersion: ${releasedVersion}"
+	sshagent (credentials: ['git-repo-ssh-access']) {
+		dir (distroDirPath) {
+			sh "git pull origin master"
+			sh "git add ${artifactName}-${releasedVersion}.tar"
+			//sh "git add ${artifactName}.tar"
+			sh 'git commit -m "Jenkins Job:${JOB_NAME} pushing image tar file" '
+			sh "git push origin HEAD:master"
+		}
+	}
+}
+
+/*
+ * Stop and Remove Container (if exists)
+ */
+def stopContainer(artifactName, serverIP) {
+	try{
+		sh """
+			ssh -t centos@${serverIP} 'sudo su && docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker stop {} &&
+			docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker rm {}' 
+			"""
+	} catch(error) {
+		echo "${error}"
+	}
+}
+
+def loadImage(distroDirPath, artifactName, releasedVersion, destinationIP) {
+	/*
+	 timeout(activity: true, time: 20, unit: 'SECONDS') {
+	 input message: 'Save to QA Env?', ok: 'Save'
+	 }
+	 */
+	sh "scp -Cp ${distroDirPath}/${artifactName}-${releasedVersion}.tar centos@${destinationIP}:/home/centos"
+	sh "ssh -t centos@${destinationIP} 'ls && sudo docker load -i ${artifactName}-${releasedVersion}.tar' "
+
+	//sh "scp -Cp ${distroDirPath}/${artifactName}.tar centos@${destinationIP}:/home/centos/"
+	//sh "ssh -t centos@${destinationIP} 'ls && sudo su && docker load -i ${artifactName}.tar' "
+}
+
+def promoteAPIToEnv(artifactName, releasedVersion, PROP_ENV, destinationIP) {
+	try{
+		sh """
+				ssh -t centos@${destinationIP} 'sudo su &&  docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -d -p 8099:8090 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
+				"""
+	} catch(error) {
+		echo "ERROR:${error}"
+	}
+}
+
+
+// TODO: Throughly validate
+def removeImages(artifactName) {
+
+	try{
+		sh "docker ps --no-trunc -aqf 'name=${artifactName}' | xargs -I {} docker stop {}"
+		sh 'docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi'
+		sh "docker images | grep SNAPSHOT | tr -s ' ' | cut -d ' ' -f 3 | xargs --no-run-if-empty docker rmi"
+
+	} catch(error) {
+		echo "${error}"
+	}
+}
 def distroCheckout(distroDirPath, distroRepoUrl) {
 	deleteDir()
 
@@ -142,72 +248,6 @@ def pushImageToRepo(applicationDir, distroDirPath, artifactName, releasedVersion
 	}
 }
 
-//Save one or more images to a tar archive.
-def saveImageToFS(applicationDir, distroDirPath, artifactName, releasedVersion) {
-	sshagent (credentials: ['git-repo-ssh-access']) {
-		sh "docker images"
-		dir (applicationDir) {
-			//docker save -o <path for generated tar file> <existing image name>
-			if (applicationDir == 'demandplannerapi') {
-				sh "docker save -o target/${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
-				echo "Copying demandplannerapi tar file..."
-				sh "cp -rf target/${artifactName}-${releasedVersion}.tar ${distroDirPath}"
-				//sh "docker save -o target/${artifactName}.tar ${artifactName}:${releasedVersion}"
-				//sh "cp -rf target/${artifactName}.tar ${distroDirPath}"
-			} else if (applicationDir == 'demandplannerui') {
-				sh "docker save -o ${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
-				echo "Copying demandplannerui tar file..."
-				sh "cp -rf ${artifactName}-${releasedVersion}.tar ${distroDirPath}"
-
-				//sh "docker save -o ${artifactName}.tar ${artifactName}:${releasedVersion}"
-				//sh "cp -rf ${artifactName}.tar ${distroDirPath}"
-			}
-		}
-	}
-}
-
-def saveImageToRepo(applicationDir, distroDirPath, artifactName, releasedVersion) {
-	echo "artifactName: ${artifactName}"
-	echo "releasedVersion: ${releasedVersion}"
-	sshagent (credentials: ['git-repo-ssh-access']) {
-		dir (distroDirPath) {
-			sh "git pull origin master"
-			sh "git add ${artifactName}-${releasedVersion}.tar"
-			//sh "git add ${artifactName}.tar"
-			sh 'git commit -m "Jenkins Job:${JOB_NAME} pushing image tar file" '
-			sh "git push origin HEAD:master"
-		}
-	}
-}
-
-
-
-
-def loadImage(distroDirPath, artifactName, releasedVersion, destinationIP) {
-	/*
-	 timeout(activity: true, time: 20, unit: 'SECONDS') {
-	 input message: 'Save to QA Env?', ok: 'Save'
-	 }
-	 */
-	removeDanglingImages(artifactName, destinationIP)
-	sh "scp -Cp ${distroDirPath}/${artifactName}-${releasedVersion}.tar centos@${destinationIP}:/home/centos"
-	sh "ssh -t centos@${destinationIP} 'ls && sudo docker load -i ${artifactName}-${releasedVersion}.tar' "
-
-	//sh "scp -Cp ${distroDirPath}/${artifactName}.tar centos@${destinationIP}:/home/centos/"
-	//sh "ssh -t centos@${destinationIP} 'ls && sudo su && docker load -i ${artifactName}.tar' "
-}
-
-def promoteAPIToEnv(artifactName, releasedVersion, PROP_ENV, destinationIP) {
-	try{
-		sh """
-				ssh -t centos@${destinationIP} 'sudo su && docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker stop {} && 
-				docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker rm {} && 
-				docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -d -p 8099:8090 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
-				"""
-	} catch(error) {
-		echo "ERROR:${error}"
-	}
-}
 
 def promoteUIToEnv(artifactName, releasedVersion, PROP_ENV, destinationIP) {
 	try{
@@ -287,39 +327,6 @@ def uiCodeQualityAnalysis(applicationDir) {
 					" -Dsonar.ts.lcov.reportpath=test-results/coverage/coverage.lcov" +
 					" -Dsonar.sourceEncoding=UTF-8"
 		}
-	}
-}
-
-
-def getArtifact(dirName) {
-	def matcher = readFile("${dirName}/pom.xml") =~ '<artifactId>(.+?)</artifactId>'
-	matcher ? matcher[0][1] : null
-}
-
-
-
-// TODO: Throughly validate
-def removeImages(artifactName) {
-
-	try{
-		sh "docker ps --no-trunc -aqf 'name=${artifactName}' | xargs -I {} docker stop {}"
-		sh 'docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi'
-		sh "docker images | grep SNAPSHOT | tr -s ' ' | cut -d ' ' -f 3 | xargs --no-run-if-empty docker rmi"
-
-	} catch(error) {
-		echo "${error}"
-	}
-}
-// TODO: Throughly validate
-def removeDanglingImages(artifactName, destinationIP) {
-	try{
-		sh """
-			ssh -t centos@${destinationIP} 'sudo su && docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi && 
-			docker images | grep SNAPSHOT | tr -s " " | cut -d " " -f 3 | xargs --no-run-if-empty docker rmi &&
-			docker ps --no-trunc -aqf 'name=${artifactName}' | xargs -I {} docker stop {}' 
-			"""
-	} catch(error) {
-		echo "${error}"
 	}
 }
 
