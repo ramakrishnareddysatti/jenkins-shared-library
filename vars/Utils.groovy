@@ -1,3 +1,54 @@
+def commonAppCheckout(applicationDir, commonRepoUrl, branchName) {
+	deleteDir()
+	echo "Checkout in progress..."
+	dir(applicationDir) {
+		git branch: "${branchName}",
+		credentialsId: 'git-repo-ssh-access',
+		url: "${commonRepoUrl}"
+	}
+}
+
+
+def getReleasedVersion(dirName) {
+	def matcher = readFile("${dirName}/pom.xml") =~ '<version>(.+?)</version>'
+	matcher ? matcher[0][1] : null
+}
+
+def processQualityGate() {
+	// Just in case something goes wrong, pipeline will be killed after a timeout
+	timeout(time: 2, unit: 'MINUTES') {
+		def qualityGate = waitForQualityGate() // Reuse taskId previously collected by withSonarQubeEnv
+		if (qualityGate.status != 'OK') {
+			//error "Pipeline aborted due to quality gate failure: ${qualityGate.status}"
+			println("SonarQube Quality Gate Failed.failure: ${qualityGate.status}")
+		} else
+		{
+			println("SonarQube Quality Gate Passed")
+		}
+	}
+}
+
+def sonarScanner(applicationDir) {
+	//********* Configure a webhook in your SonarQube server pointing to <your Jenkins instance>/sonarqube-webhook/ ********
+	dir(applicationDir) {
+		withSonarQubeEnv('SonarQube_V7') { // SonarQube taskId is automatically attached to the pipeline context
+			sh "mvn org.sonarsource.scanner.maven:sonar-maven-plugin:3.3.0.603:sonar" }
+	}
+}
+
+
+def tagBranch(applicationDir, repoUrl, taggedVersion) {
+	sshagent (credentials: ['git-repo-ssh-access']) {
+		dir (applicationDir) {
+			sh "ls -l"
+			sh "git remote set-url origin ${repoUrl}"
+			//sh "git tag ${IMAGE_BRANCH_PREFIX}-${BUILD_NUMBER}"
+			sh "git tag ${taggedVersion}"
+			sh "git push --tags"
+		}
+	}
+}
+
 def sourceCodeCheckout(applicationDir, branchName, repoUrl, distroDirPath, distroRepoUrl) {
 	deleteDir()
 	echo "Checkout in progress..."
@@ -130,17 +181,7 @@ def saveImageToRepo(applicationDir, distroDirPath, artifactName, releasedVersion
 }
 
 
-def tagBranch(applicationDir, repoUrl, taggedVersion) {
-	sshagent (credentials: ['git-repo-ssh-access']) {
-		dir (applicationDir) {
-			sh "ls -l"
-			sh "git remote set-url origin ${repoUrl}"
-			//sh "git tag ${IMAGE_BRANCH_PREFIX}-${BUILD_NUMBER}"
-			sh "git tag ${taggedVersion}"
-			sh "git push --tags"
-		}
-	}
-}
+
 
 def loadImage(distroDirPath, artifactName, releasedVersion, destinationIP) {
 	/*
@@ -249,29 +290,13 @@ def uiCodeQualityAnalysis(applicationDir) {
 	}
 }
 
-def processQualityGate(){
-	// Just in case something goes wrong, pipeline will be killed after a timeout
-	timeout(time: 2, unit: 'MINUTES') {
-		def qualityGate = waitForQualityGate() // Reuse taskId previously collected by withSonarQubeEnv
-		if (qualityGate.status != 'OK') {
-			//error "Pipeline aborted due to quality gate failure: ${qualityGate.status}"
-			println("SonarQube Quality Gate Failed.failure: ${qualityGate.status}")
-		} else
-		{
-			println("SonarQube Quality Gate Passed")
-		}
-	}
-}
 
 def getArtifact(dirName) {
 	def matcher = readFile("${dirName}/pom.xml") =~ '<artifactId>(.+?)</artifactId>'
 	matcher ? matcher[0][1] : null
 }
 
-def getReleasedVersion(dirName) {
-	def matcher = readFile("${dirName}/pom.xml") =~ '<version>(.+?)</version>'
-	matcher ? matcher[0][1] : null
-}
+
 
 // TODO: Throughly validate
 def removeImages(artifactName) {
