@@ -1,3 +1,51 @@
+def commonAppCheckout(applicationDir, commonRepoUrl, branchName) {
+	deleteDir()
+	echo "Checkout in progress..."
+	dir(applicationDir) {
+		git branch: "${branchName}",
+		credentialsId: 'git-repo-ssh-access',
+		url: "${commonRepoUrl}"
+	}
+}
+
+// Using in Common Application Jenkins file
+def getReleasedVersion(applicationDir) {
+	def matcher = readFile("${applicationDir}/pom.xml") =~ '<version>(.+?)</version>'
+	matcher ? matcher[0][1] : null
+}
+
+// Using in DP API Application Jenkins file
+def getArtifact(applicationDir) {
+	def matcher = readFile("${applicationDir}/pom.xml") =~ '<artifactId>(.+?)</artifactId>'
+	matcher ? matcher[0][1] : null
+}
+
+def processQualityGate() {
+	// Just in case something goes wrong, pipeline will be killed after a timeout
+	timeout(time: 2, unit: 'MINUTES') {
+		def qualityGate = waitForQualityGate() // Reuse taskId previously collected by withSonarQubeEnv
+		if (qualityGate.status != 'OK') {
+			//error "Pipeline aborted due to quality gate failure: ${qualityGate.status}"
+			println("SonarQube Quality Gate Failed.failure: ${qualityGate.status}")
+		} else
+		{
+			println("SonarQube Quality Gate Passed")
+		}
+	}
+}
+
+def tagBranch(applicationDir, repoUrl, taggedVersion) {
+	sshagent (credentials: ['git-repo-ssh-access']) {
+		dir (applicationDir) {
+			sh "ls -l"
+			sh "git remote set-url origin ${repoUrl}"
+			//sh "git tag ${IMAGE_BRANCH_PREFIX}-${BUILD_NUMBER}"
+			sh "git tag ${taggedVersion}"
+			sh "git push --tags"
+		}
+	}
+}
+
 def sourceCodeCheckout(applicationDir, branchName, repoUrl, distroDirPath, distroRepoUrl) {
 	deleteDir()
 	echo "Checkout in progress..."
@@ -26,72 +74,38 @@ def sourceCodeCheckout(applicationDir, branchName, repoUrl, distroDirPath, distr
 	}
 }
 
-def distroCheckout(distroDirPath, distroRepoUrl) {
-	deleteDir()
-
-	// Check for directory
-	if(!fileExists(distroDirPath))
-	{
-		echo "${distroDirPath} doesn't exist.Continue cloning ..."
-
-		dir(distroDirPath){
-			git branch: 'master',
-			credentialsId: 'git-repo-ssh-access',
-			url: "${distroRepoUrl}"
-		}
-	}
-	else {
-		echo "${distroDirPath} is already exist.Continue updating ..."
-		sshagent (credentials: ['git-repo-ssh-access']) {
-			dir(distroDirPath) { sh "git pull origin HEAD:master" }
-		}
+// TODO: Throughly validate
+/*
+ * Responsible to remove "dangling images" and application "SNAPSHOT" images (if exists).
+ *
+ */
+def removeDanglingImages(artifactName, serverIP) {
+	// docker images | grep SNAPSHOT
+	try{
+		sh """
+			ssh centos@${serverIP} 'sudo su && docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi && 
+			docker images | grep demandplanner | tr -s " " | cut -d " " -f 3 | xargs --no-run-if-empty docker rmi' 
+			"""
+	} catch(error) {
+		echo "${error}"
 	}
 }
 
-def uiDockerBuild(applicationDir, artifactName, releasedVersion) {
-	dir(applicationDir) {
-		echo "Starting Docker Image Creation..."
-		sh "docker build -t ${artifactName}:${releasedVersion} ."
-		echo "Docker Image Creation Complted..."
-	}
+def saveImage(applicationDir, distroDirPath, artifactName, releasedVersion, GIT_IMAGE_PUSH) {
+		if (GIT_IMAGE_PUSH.toBoolean()) {
+			echo "Save Image to Tar Archive and pushing Tar to Git Repo"
+			saveImageToFS(applicationDir, distroDirPath, artifactName, releasedVersion)
+			saveImageToRepo(applicationDir, distroDirPath, artifactName, releasedVersion)
+		} else {
+			echo "Save Image to Tar Archive and Copy image to ${distroDirPath}"
+			saveImageToFS(applicationDir, distroDirPath, artifactName, releasedVersion)
+		}
 }
 
-//Save one or more images to a tar archive.
-def pushImageToRepo(applicationDir, distroDirPath, artifactName, releasedVersion) {
 
-	echo "artifactName: ${artifactName}"
-	echo "releasedVersion: ${releasedVersion}"
-	sshagent (credentials: ['git-repo-ssh-access']) {
-		sh "docker images"
-		dir (applicationDir) {
-			//docker save -o <path for generated tar file> <existing image name>
-			if (applicationDir == 'demandplannerapi') {
-				sh "docker save -o target/${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
-				echo "Copying demandplannerapi tar file..."
-				sh "cp -rf target/${artifactName}-${releasedVersion}.tar ${distroDirPath}"
-				//sh "docker save -o target/${artifactName}.tar ${artifactName}:${releasedVersion}"
-				//sh "cp -rf target/${artifactName}.tar ${distroDirPath}"
-			} else if (applicationDir == 'demandplannerui') {
-				sh "docker save -o ${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
-				echo "Copying demandplannerui tar file..."
-				sh "cp -rf ${artifactName}-${releasedVersion}.tar ${distroDirPath}"
-
-				//sh "docker save -o ${artifactName}.tar ${artifactName}:${releasedVersion}"
-				//sh "cp -rf ${artifactName}.tar ${distroDirPath}"
-			}
-		}
-
-		dir (distroDirPath) {
-			sh "git pull origin master"
-			sh "git add ${artifactName}-${releasedVersion}.tar"
-			//sh "git add ${artifactName}.tar"
-			sh 'git commit -m "Jenkins Job:${JOB_NAME} pushing image tar file" '
-			sh "git push origin HEAD:master"
-		}
-	}
-}
-
-//Save one or more images to a tar archive.
+/*
+ * Save one or more images to a tar archive and copy to distro path.
+ */
 def saveImageToFS(applicationDir, distroDirPath, artifactName, releasedVersion) {
 	sshagent (credentials: ['git-repo-ssh-access']) {
 		sh "docker images"
@@ -115,6 +129,9 @@ def saveImageToFS(applicationDir, distroDirPath, artifactName, releasedVersion) 
 	}
 }
 
+/*
+ * Save one or more images to a tar archive and push to repo.
+ */
 def saveImageToRepo(applicationDir, distroDirPath, artifactName, releasedVersion) {
 	echo "artifactName: ${artifactName}"
 	echo "releasedVersion: ${releasedVersion}"
@@ -129,16 +146,17 @@ def saveImageToRepo(applicationDir, distroDirPath, artifactName, releasedVersion
 	}
 }
 
-
-def tagBranch(applicationDir, repoUrl, taggedVersion) {
-	sshagent (credentials: ['git-repo-ssh-access']) {
-		dir (applicationDir) {
-			sh "ls -l"
-			sh "git remote set-url origin ${repoUrl}"
-			//sh "git tag ${IMAGE_BRANCH_PREFIX}-${BUILD_NUMBER}"
-			sh "git tag ${taggedVersion}"
-			sh "git push --tags"
-		}
+/*
+ * Stop and Remove Container (if exists)
+ */
+def stopContainer(artifactName, serverIP) {
+	try{
+		sh """
+			ssh centos@${serverIP} 'sudo su && docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker stop {} &&
+			docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker rm {}' 
+			"""
+	} catch(error) {
+		echo "${error}"
 	}
 }
 
@@ -148,9 +166,17 @@ def loadImage(distroDirPath, artifactName, releasedVersion, destinationIP) {
 	 input message: 'Save to QA Env?', ok: 'Save'
 	 }
 	 */
-	removeDanglingImages(artifactName, destinationIP)
+	 
+	   // BE CAREFUL WHILE DOING THIS. IT'S GOING TO REMOVE ALL THE *PREVIOUS* TAR(UI AND API) FILES
+		// To Remove SNAPSHOT TAR Files
+		try {
+			sh "ssh centos@${destinationIP} 'ls && rm *${artifactName}*.tar ' "
+		} catch(error) {
+			echo "${error}"
+		}
+	
 	sh "scp -Cp ${distroDirPath}/${artifactName}-${releasedVersion}.tar centos@${destinationIP}:/home/centos"
-	sh "ssh -t centos@${destinationIP} 'ls && sudo docker load -i ${artifactName}-${releasedVersion}.tar' "
+	sh "ssh centos@${destinationIP} 'ls && sudo docker load -i ${artifactName}-${releasedVersion}.tar' "
 
 	//sh "scp -Cp ${distroDirPath}/${artifactName}.tar centos@${destinationIP}:/home/centos/"
 	//sh "ssh -t centos@${destinationIP} 'ls && sudo su && docker load -i ${artifactName}.tar' "
@@ -159,62 +185,17 @@ def loadImage(distroDirPath, artifactName, releasedVersion, destinationIP) {
 def promoteAPIToEnv(artifactName, releasedVersion, PROP_ENV, destinationIP) {
 	try{
 		sh """
-				ssh -t centos@${destinationIP} 'sudo su && docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker stop {} && 
-				docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker rm {} && 
-				docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -d -p 8099:8090 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
+				ssh centos@${destinationIP} 'sudo su &&  docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -d -p 8099:8090 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
 				"""
 	} catch(error) {
 		echo "ERROR:${error}"
 	}
 }
 
-def promoteUIToEnv(artifactName, releasedVersion, PROP_ENV, destinationIP) {
-	try{
-		sh """
-				ssh -t centos@${destinationIP} 'sudo su && docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker stop {} && 
-				docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker rm {} && 
-				docker run -d -p 8098:80 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
-			"""
-	} catch(error) {
-		echo "ERROR:${error}"
-	}
-}
-
-def deployAPIToDev(artifactName, releasedVersion, PROP_ENV) {
-	echo "releasedVersion in deployAPIToDev: ${releasedVersion}"
-	sh "docker ps"
-	def  containerId = sh (
-			script: "docker ps --no-trunc -aqf 'name=${artifactName}'",
-			returnStdout: true
-			).trim()
-	echo "containerId: ${containerId}"
-
-	if (containerId != "") {
-		sh "docker stop ${containerId}"
-		sh "docker rm -f ${containerId}"
-	}
-	sh "docker run -e 'SPRING_PROFILES_ACTIVE=${PROP_ENV}' -d -p 8099:8090 --name ${artifactName} -t ${artifactName}:${releasedVersion}"
-}
-
-def deployUIToDev(artifactName, releasedVersion, PROP_ENV) {
-	sh "docker ps"
-	def  containerId = sh (
-			script: "docker ps --no-trunc -aqf 'name=${artifactName}'",
-			returnStdout: true
-			).trim()
-	echo "containerId: ${containerId}"
-
-	if (containerId != "") {
-		sh "docker stop ${containerId}"
-		sh "docker rm -f ${containerId}"
-	}
-	sh "docker run -d -p 8098:80 --name  ${artifactName} -t ${artifactName}:${releasedVersion}"
-}
-
+/* ################################  UI Utility Methods ############################### */
 
 //This stage installs all of the node dependencies, performs linting and builds the code.
 def npmBuild(applicationDir, branchName, repoUrl) {
-	//ng build generated 'dist' folder. To avoid putting 'dist' folder in  'demandplannerui'
 	dir(applicationDir) {
 		git branch: "${branchName}",
 		credentialsId: 'git-repo-ssh-access',
@@ -235,7 +216,7 @@ def uiCodeQualityAnalysis(applicationDir) {
 	def sonarqubeScannerHome = tool 'SonarQubeScanner_V3'
 	dir(applicationDir) {
 		withSonarQubeEnv('SonarQube_V7') {
-			sh 'ls -l'
+			sh 'ls -la'
 			sh "${sonarqubeScannerHome}/bin/sonar-scanner" +
 					" -Dsonar.projectKey=demandplannerui" +
 					" -Dsonar.sources=src" +
@@ -249,54 +230,24 @@ def uiCodeQualityAnalysis(applicationDir) {
 	}
 }
 
-def processQualityGate(){
-	// Just in case something goes wrong, pipeline will be killed after a timeout
-	timeout(time: 2, unit: 'MINUTES') {
-		def qualityGate = waitForQualityGate() // Reuse taskId previously collected by withSonarQubeEnv
-		if (qualityGate.status != 'OK') {
-			//error "Pipeline aborted due to quality gate failure: ${qualityGate.status}"
-			println("SonarQube Quality Gate Failed.failure: ${qualityGate.status}")
-		} else
-		{
-			println("SonarQube Quality Gate Passed")
-		}
+def uiDockerBuild(applicationDir, artifactName, releasedVersion) {
+	dir(applicationDir) {
+		echo "Starting Docker Image Creation..."
+		sh "docker build -t ${artifactName}:${releasedVersion} ."
+		echo "Docker Image Creation Complted..."
 	}
 }
 
-def getArtifact(dirName) {
-	def matcher = readFile("${dirName}/pom.xml") =~ '<artifactId>(.+?)</artifactId>'
-	matcher ? matcher[0][1] : null
-}
-
-def getReleasedVersion(dirName) {
-	def matcher = readFile("${dirName}/pom.xml") =~ '<version>(.+?)</version>'
-	matcher ? matcher[0][1] : null
-}
-
-// TODO: Throughly validate
-def removeImages(artifactName) {
-
-	try{
-		sh "docker ps --no-trunc -aqf 'name=${artifactName}' | xargs -I {} docker stop {}"
-		sh 'docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi'
-		sh "docker images | grep SNAPSHOT | tr -s ' ' | cut -d ' ' -f 3 | xargs --no-run-if-empty docker rmi"
-
-	} catch(error) {
-		echo "${error}"
-	}
-}
-// TODO: Throughly validate
-def removeDanglingImages(artifactName, destinationIP) {
+def promoteUIToEnv(artifactName, releasedVersion, PROP_ENV, destinationIP) {
 	try{
 		sh """
-			ssh -t centos@${destinationIP} 'sudo su && docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi && 
-			docker images | grep SNAPSHOT | tr -s " " | cut -d " " -f 3 | xargs --no-run-if-empty docker rmi &&
-			docker ps --no-trunc -aqf 'name=${artifactName}' | xargs -I {} docker stop {}' 
+				ssh centos@${destinationIP} 'sudo su &&	docker run -d -p 8098:80 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
 			"""
 	} catch(error) {
-		echo "${error}"
+		echo "ERROR:${error}"
 	}
 }
+
 
 def sendNotification(buildStatus) {
 	//def mailRecipients = 'r.satti@accenture.com, sashi.kumar.sharma@accenture.com, shresthi.garg@accenture.com, suresh.kumar.sahoo@accenture.com, s.b.jha@accenture.com';
@@ -339,4 +290,109 @@ def sendNotification(buildStatus) {
 				replyTo: "${mailRecipients}"
 				)
 	}
+}
+
+// TODO: Throughly validate
+def removeImages(artifactName) {
+
+	try{
+		//sh "docker ps --no-trunc -aqf 'name=${artifactName}' | xargs -I {} docker stop {}"
+		sh """
+			docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi && 
+			docker images | grep SNAPSHOT | tr -s ' ' | cut -d ' ' -f 3 | xargs --no-run-if-empty docker rmi
+		"""
+	} catch(error) {
+		echo "${error}"
+	}
+}
+
+/* ################################  UNUSED Methods. Please Verify before DELETE ############################### */
+def distroCheckout(distroDirPath, distroRepoUrl) {
+	deleteDir()
+
+	// Check for directory
+	if(!fileExists(distroDirPath))
+	{
+		echo "${distroDirPath} doesn't exist.Continue cloning ..."
+
+		dir(distroDirPath){
+			git branch: 'master',
+			credentialsId: 'git-repo-ssh-access',
+			url: "${distroRepoUrl}"
+		}
+	}
+	else {
+		echo "${distroDirPath} is already exist.Continue updating ..."
+		sshagent (credentials: ['git-repo-ssh-access']) {
+			dir(distroDirPath) { sh "git pull origin HEAD:master" }
+		}
+	}
+}
+
+
+
+//Save one or more images to a tar archive.
+def pushImageToRepo(applicationDir, distroDirPath, artifactName, releasedVersion) {
+
+	echo "artifactName: ${artifactName}"
+	echo "releasedVersion: ${releasedVersion}"
+	sshagent (credentials: ['git-repo-ssh-access']) {
+		sh "docker images"
+		dir (applicationDir) {
+			//docker save -o <path for generated tar file> <existing image name>
+			if (applicationDir == 'demandplannerapi') {
+				sh "docker save -o target/${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
+				echo "Copying demandplannerapi tar file..."
+				sh "cp -rf target/${artifactName}-${releasedVersion}.tar ${distroDirPath}"
+				//sh "docker save -o target/${artifactName}.tar ${artifactName}:${releasedVersion}"
+				//sh "cp -rf target/${artifactName}.tar ${distroDirPath}"
+			} else if (applicationDir == 'demandplannerui') {
+				sh "docker save -o ${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
+				echo "Copying demandplannerui tar file..."
+				sh "cp -rf ${artifactName}-${releasedVersion}.tar ${distroDirPath}"
+
+				//sh "docker save -o ${artifactName}.tar ${artifactName}:${releasedVersion}"
+				//sh "cp -rf ${artifactName}.tar ${distroDirPath}"
+			}
+		}
+
+		dir (distroDirPath) {
+			sh "git pull origin master"
+			sh "git add ${artifactName}-${releasedVersion}.tar"
+			//sh "git add ${artifactName}.tar"
+			sh 'git commit -m "Jenkins Job:${JOB_NAME} pushing image tar file" '
+			sh "git push origin HEAD:master"
+		}
+	}
+}
+
+def deployAPIToDev(artifactName, releasedVersion, PROP_ENV) {
+	echo "releasedVersion in deployAPIToDev: ${releasedVersion}"
+	sh "docker ps"
+	def  containerId = sh (
+			script: "docker ps --no-trunc -aqf 'name=${artifactName}'",
+			returnStdout: true
+			).trim()
+	echo "containerId: ${containerId}"
+
+	if (containerId != "") {
+		sh "docker stop ${containerId}"
+		sh "docker rm -f ${containerId}"
+	}
+	sh "docker run -e 'SPRING_PROFILES_ACTIVE=${PROP_ENV}' -d -p 8099:8090 --name ${artifactName} -t ${artifactName}:${releasedVersion}"
+}
+
+def deployUIToDev(artifactName, releasedVersion, PROP_ENV) {
+	sh "docker ps"
+	def  containerId = sh (
+			script: "docker ps --no-trunc -aqf 'name=${artifactName}'",
+			returnStdout: true
+			).trim()
+	echo "containerId: ${containerId}"
+
+	if (containerId != "") {
+		sh "docker stop ${containerId}"
+		sh "docker rm -f ${containerId}"
+	}
+	sh "docker run -d -p 8098:80 --name  ${artifactName} -t ${artifactName}:${releasedVersion}"
 }
