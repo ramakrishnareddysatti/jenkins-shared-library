@@ -159,12 +159,6 @@ def saveImageToRepo(applicationDir, distroDirPath, artifactName, releasedVersion
 	sshagent (credentials: ['git-repo-ssh-access']) {
 		dir (distroDirPath) {
 			sh """
-				git pull origin master
-				git rm demandplannerui-0.SNAPSHOT.9.tar
-				git rm demandplannerui-0.1.tar
-				git rm demandplannerui-0.SNAPSHOT.14.tar
-				git rm demandplannerui.tar
-				
 				git add version.txt
 				git add ${artifactName}-${releasedVersion}.tar
 				git commit -m "Jenkins Job:${JOB_NAME} pushing image tar and version file"
