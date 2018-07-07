@@ -74,13 +74,11 @@ def sourceCodeCheckout(applicationDir, branchName, repoUrl, distroDirPath, distr
 	}
 }
 
-// TODO: Throughly validate
 /*
  * Responsible to remove "dangling images" and application "SNAPSHOT" images (if exists).
  *
  */
 def removeDanglingImages(artifactName, serverIP) {
-	// docker images | grep SNAPSHOT
 	try{
 		sh """
 			ssh centos@${serverIP} 'sudo su && docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi && 
@@ -91,14 +89,12 @@ def removeDanglingImages(artifactName, serverIP) {
 	}
 }
 
-// TODO: Throughly validate
 /*
  * Responsible to remove "dangling images" and application "SNAPSHOT" images (if exists) from JENKINS BOX.
  */ 
 def removeImages(artifactName) {
 
 	try{
-		//sh "docker ps --no-trunc -aqf 'name=${artifactName}' | xargs -I {} docker stop {}"
 		sh """
 			docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi && 
 			docker images | grep SNAPSHOT | tr -s " " | cut -d " " -f 3 | xargs --no-run-if-empty docker rmi
@@ -132,15 +128,10 @@ def saveImageToFS(applicationDir, distroDirPath, artifactName, releasedVersion) 
 				sh "docker save -o target/${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
 				echo "Copying demandplannerapi tar file..."
 				sh "cp -rf target/${artifactName}-${releasedVersion}.tar ${distroDirPath}"
-				//sh "docker save -o target/${artifactName}.tar ${artifactName}:${releasedVersion}"
-				//sh "cp -rf target/${artifactName}.tar ${distroDirPath}"
 			} else if (applicationDir == 'demandplannerui') {
 				sh "docker save -o ${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
 				echo "Copying demandplannerui tar file..."
 				sh "cp -rf ${artifactName}-${releasedVersion}.tar ${distroDirPath}"
-
-				//sh "docker save -o ${artifactName}.tar ${artifactName}:${releasedVersion}"
-				//sh "cp -rf ${artifactName}.tar ${distroDirPath}"
 			}
 		}
 	}
@@ -152,29 +143,33 @@ def saveImageToFS(applicationDir, distroDirPath, artifactName, releasedVersion) 
 def saveImageToRepo(applicationDir, distroDirPath, artifactName, releasedVersion) {
 	echo "artifactName: ${artifactName}"
 	echo "releasedVersion: ${releasedVersion}"
-
-	/*
-	if (!fileExists(distroDirPath/version.txt) {
-		echo "${distroDirPath}/version.txt file exist"
-		sh "echo ${releasedVersion} >> ${distroDirPath}/version.txt"
-	}
-	else
-	{
-		echo "creating ${distroDirPath}/version.txt"
-		sh "echo ${releasedVersion} > ${distroDirPath}/version.txt"
-	}
-	*/
 	
 	echo "creating ${distroDirPath}/version.txt"
+	// Overwrite version.txt with new version
 	sh "echo ${releasedVersion} > ${distroDirPath}/version.txt"
 
+	
 	sshagent (credentials: ['git-repo-ssh-access']) {
 		dir (distroDirPath) {
+			if(!fileExists('*SNAPSHOT*.tar')) {
+				sh 'ls && git rm -rf *SNAPSHOT*.tar'
+			} else {
+				echo "NO IMAGES IN REPO"	
+			}
+			sh """
+				git pull origin master
+				git add version.txt
+				git add ${artifactName}-${releasedVersion}.tar
+				git commit -m "Jenkins Job:${JOB_NAME} pushing image tar and version file"
+				git push origin HEAD:master
+			"""
+			/*
 			sh "git pull origin master"
 			sh "git add version.txt"
 			sh "git add ${artifactName}-${releasedVersion}.tar"
 			sh 'git commit -m "Jenkins Job:${JOB_NAME} pushing image tar and version file" '
 			sh "git push origin HEAD:master"
+			*/
 		}
 	}
 }
