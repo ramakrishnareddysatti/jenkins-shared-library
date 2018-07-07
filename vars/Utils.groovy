@@ -202,13 +202,9 @@ def loadImage(distroDirPath, artifactName, releasedVersion, destinationIP) {
 }
 
 def promoteAPIToEnv(artifactName, releasedVersion, PROP_ENV, destinationIP) {
-	try{
 		sh """
 				ssh centos@${destinationIP} 'sudo su &&  docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -d -p 8099:8090 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
 				"""
-	} catch(error) {
-		echo "ERROR:${error}"
-	}
 }
 
 /* ################################  UI Utility Methods ############################### */
@@ -258,13 +254,9 @@ def uiDockerBuild(applicationDir, artifactName, releasedVersion) {
 }
 
 def promoteUIToEnv(artifactName, releasedVersion, PROP_ENV, destinationIP) {
-	try{
 		sh """
 				ssh centos@${destinationIP} 'sudo su &&	docker run -d -p 8098:80 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
 			"""
-	} catch(error) {
-		echo "ERROR:${error}"
-	}
 }
 
 
