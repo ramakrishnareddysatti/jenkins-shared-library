@@ -152,13 +152,28 @@ def saveImageToFS(applicationDir, distroDirPath, artifactName, releasedVersion) 
 def saveImageToRepo(applicationDir, distroDirPath, artifactName, releasedVersion) {
 	echo "artifactName: ${artifactName}"
 	echo "releasedVersion: ${releasedVersion}"
-	sh "echo ${artifactName}-${releasedVersion} >> ${distroDirPath}/version.txt"
+
+	/*
+	if (!fileExists(distroDirPath/version.txt) {
+		echo "${distroDirPath}/version.txt file exist"
+		sh "echo ${releasedVersion} >> ${distroDirPath}/version.txt"
+	}
+	else
+	{
+		echo "creating ${distroDirPath}/version.txt"
+		sh "echo ${releasedVersion} > ${distroDirPath}/version.txt"
+	}
+	*/
+	
+	echo "creating ${distroDirPath}/version.txt"
+	sh "echo ${releasedVersion} > ${distroDirPath}/version.txt"
+
 	sshagent (credentials: ['git-repo-ssh-access']) {
 		dir (distroDirPath) {
 			sh "git pull origin master"
 			sh "git add version.txt"
 			sh "git add ${artifactName}-${releasedVersion}.tar"
-			sh 'git commit -m "Jenkins Job:${JOB_NAME} pushing image tar file" '
+			sh 'git commit -m "Jenkins Job:${JOB_NAME} pushing image tar and version file" '
 			sh "git push origin HEAD:master"
 		}
 	}
@@ -310,8 +325,7 @@ def sendNotification(buildStatus) {
 	}
 }
 
-
-/* ################################  UNUSED Methods. Please Verify before DELETE ############################### */
+/* ################################  Promotion Pipeline ############################### */
 def distroCheckout(distroDirPath, distroRepoUrl) {
 	deleteDir()
 
@@ -333,6 +347,8 @@ def distroCheckout(distroDirPath, distroRepoUrl) {
 		}
 	}
 }
+
+/* ################################  UNUSED Methods. Please Verify before DELETE ############################### */
 
 def deployAPIToDev(artifactName, releasedVersion, PROP_ENV) {
 	echo "releasedVersion in deployAPIToDev: ${releasedVersion}"
