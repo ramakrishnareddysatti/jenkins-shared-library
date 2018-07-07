@@ -133,11 +133,11 @@ def saveImageToFS(applicationDir, distroDirPath, artifactName, releasedVersion) 
 			//docker save -o <path for generated tar file> <existing image name>
 			if (applicationDir == 'demandplannerapi') {
 				sh "docker save -o target/${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
-				echo "Copying demandplannerapi tar file..."
+				echo "Copying demandplannerapi tar file to ${distroDirPath}"
 				sh "cp -rf target/${artifactName}-${releasedVersion}.tar ${distroDirPath}"
 			} else if (applicationDir == 'demandplannerui') {
 				sh "docker save -o ${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
-				echo "Copying demandplannerui tar file..."
+				echo "Copying demandplannerui tar file to ${distroDirPath}"
 				sh "cp -rf ${artifactName}-${releasedVersion}.tar ${distroDirPath}"
 			}
 		}
@@ -165,13 +165,6 @@ def saveImageToRepo(applicationDir, distroDirPath, artifactName, releasedVersion
 				git commit -m "Jenkins Job:${JOB_NAME} pushing image tar and version file"
 				git push origin HEAD:master
 			"""
-			/*
-			sh "git pull origin master"
-			sh "git add version.txt"
-			sh "git add ${artifactName}-${releasedVersion}.tar"
-			sh 'git commit -m "Jenkins Job:${JOB_NAME} pushing image tar and version file" '
-			sh "git push origin HEAD:master"
-			*/
 		}
 	}
 }
@@ -207,9 +200,6 @@ def loadImage(distroDirPath, artifactName, releasedVersion, destinationIP) {
 	
 	sh "scp -Cp ${distroDirPath}/${artifactName}-${releasedVersion}.tar centos@${destinationIP}:/home/centos"
 	sh "ssh centos@${destinationIP} 'ls && sudo docker load -i ${artifactName}-${releasedVersion}.tar' "
-
-	//sh "scp -Cp ${distroDirPath}/${artifactName}.tar centos@${destinationIP}:/home/centos/"
-	//sh "ssh -t centos@${destinationIP} 'ls && sudo su && docker load -i ${artifactName}.tar' "
 }
 
 def promoteAPIToEnv(artifactName, releasedVersion, PROP_ENV, destinationIP) {
