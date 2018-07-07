@@ -151,8 +151,9 @@ def saveImageToRepo(applicationDir, distroDirPath, artifactName, releasedVersion
 	
 	sshagent (credentials: ['git-repo-ssh-access']) {
 		dir (distroDirPath) {
+			
 			if(!fileExists('*SNAPSHOT*.tar')) {
-				sh 'ls && git rm -rf *SNAPSHOT*.tar'
+				sh 'ls && rm -rf *SNAPSHOT*.tar'
 			} else {
 				echo "NO IMAGES IN REPO"	
 			}
