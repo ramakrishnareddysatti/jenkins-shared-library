@@ -152,7 +152,22 @@ def saveImageToFS(applicationDir, distroDirPath, artifactName, releasedVersion) 
 def saveImageToRepo(applicationDir, distroDirPath, artifactName, releasedVersion) {
 	echo "artifactName: ${artifactName}"
 	echo "releasedVersion: ${releasedVersion}"
-	sh "echo ${releasedVersion} >> ${distroDirPath}/version.txt"
+
+	/*
+	if (!fileExists(distroDirPath/version.txt) {
+		echo "${distroDirPath}/version.txt file exist"
+		sh "echo ${releasedVersion} >> ${distroDirPath}/version.txt"
+	}
+	else
+	{
+		echo "creating ${distroDirPath}/version.txt"
+		sh "echo ${releasedVersion} > ${distroDirPath}/version.txt"
+	}
+	*/
+	
+	echo "creating ${distroDirPath}/version.txt"
+	sh "echo ${releasedVersion} > ${distroDirPath}/version.txt"
+
 	sshagent (credentials: ['git-repo-ssh-access']) {
 		dir (distroDirPath) {
 			sh "git pull origin master"
