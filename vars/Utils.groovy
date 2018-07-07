@@ -123,6 +123,12 @@ def saveImageToFS(applicationDir, distroDirPath, artifactName, releasedVersion) 
 	sshagent (credentials: ['git-repo-ssh-access']) {
 		sh "docker images"
 		dir (applicationDir) {
+			
+			if(!fileExists('*SNAPSHOT*.tar')) {
+				sh 'ls && rm -rf *SNAPSHOT*.tar'
+			} else {
+				echo "NO SNAPSHOT IMAGES IN ${applicationDir}"	
+			}
 			//docker save -o <path for generated tar file> <existing image name>
 			if (applicationDir == 'demandplannerapi') {
 				sh "docker save -o target/${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
@@ -151,12 +157,6 @@ def saveImageToRepo(applicationDir, distroDirPath, artifactName, releasedVersion
 	
 	sshagent (credentials: ['git-repo-ssh-access']) {
 		dir (distroDirPath) {
-			
-			if(!fileExists('*SNAPSHOT*.tar')) {
-				sh 'ls && rm -rf *SNAPSHOT*.tar'
-			} else {
-				echo "NO IMAGES IN REPO"	
-			}
 			sh """
 				git pull origin master
 				git add version.txt
