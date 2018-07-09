@@ -264,6 +264,7 @@ def sendEmailNotification(subjectText, bodyText) {
 	subjectText = "JENKINS Notification : Successful Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'"
 	bodyText = """ <p>Successful: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]':</p><p>Check console output at "<a href="${env.BUILD_URL}">${env.JOB_NAME} [${env.BUILD_NUMBER}]</a>"</p>"""
 	
+	/*  TODO: commenting for the time being, as the build failes
 	emailext(
 				subject: subjectText,
 				body: bodyText,
@@ -271,6 +272,8 @@ def sendEmailNotification(subjectText, bodyText) {
 				to: "${mailRecipients}",
 				replyTo: "${mailRecipients}"
 			)
+
+	*/
 
 }
 
