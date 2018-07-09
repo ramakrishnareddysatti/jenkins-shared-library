@@ -266,7 +266,7 @@ def sendEmailNotification(subjectText, bodyText) {
 	
 	emailext(
 				subject: subjectText,
-				body: bodyText
+				body: bodyText,
 				recipientProviders: [culprits(), developers(), requestor(), brokenTestsSuspects(), brokenBuildSuspects(), upstreamDevelopers()],
 				to: "${mailRecipients}",
 				replyTo: "${mailRecipients}"
