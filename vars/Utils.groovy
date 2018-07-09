@@ -255,10 +255,24 @@ def uiDockerBuild(applicationDir, artifactName, releasedVersion) {
 
 def promoteUIToEnv(artifactName, releasedVersion, PROP_ENV, destinationIP) {
 		sh """
-				ssh centos@${destinationIP} 'sudo su &&	docker run -d -p 8098:80 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
+				ssh centos@${destinationIP} 'sudo su &&	docker run -e \'APP_ENV=${PROP_ENV}\' -d -p 8098:80 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
 			"""
 }
 
+def sendEmailNotification(subjectText, bodyText) {
+	
+	subjectText = "JENKINS Notification : Successful Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'"
+	bodyText = """ <p>Successful: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]':</p><p>Check console output at "<a href="${env.BUILD_URL}">${env.JOB_NAME} [${env.BUILD_NUMBER}]</a>"</p>"""
+	
+	emailext(
+				subject: subjectText,
+				body: bodyText
+				recipientProviders: [culprits(), developers(), requestor(), brokenTestsSuspects(), brokenBuildSuspects(), upstreamDevelopers()],
+				to: "${mailRecipients}",
+				replyTo: "${mailRecipients}"
+			)
+
+}
 
 def sendNotification(buildStatus) {
 	//def mailRecipients = 'r.satti@accenture.com, sashi.kumar.sharma@accenture.com, shresthi.garg@accenture.com, suresh.kumar.sahoo@accenture.com, s.b.jha@accenture.com';
@@ -356,5 +370,5 @@ def deployUIToDev(artifactName, releasedVersion, PROP_ENV) {
 		sh "docker stop ${containerId}"
 		sh "docker rm -f ${containerId}"
 	}
-	sh "docker run -d -p 8098:80 --name  ${artifactName} -t ${artifactName}:${releasedVersion}"
+	sh "docker run -e 'APP_ENV=${PROP_ENV}' -d -p 8098:80 --name  ${artifactName} -t ${artifactName}:${releasedVersion}"
 }
