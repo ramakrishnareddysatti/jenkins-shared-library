@@ -204,6 +204,11 @@ def loadImage(distroDirPath, artifactName, releasedVersion, destinationIP) {
 	sh "ssh centos@${destinationIP} 'ls && sudo docker load -i ${artifactName}-${releasedVersion}.tar' "
 }
 
+def loadImageInProd(distroDirPath, artifactName, releasedVersion, destinationIP) {
+	sh "scp -Cp ${distroDirPath}/${artifactName}-${releasedVersion}.tar centos@${destinationIP}:/home/centos"
+	sh "ssh centos@${destinationIP} 'ls && sudo docker load -i ${artifactName}-${releasedVersion}.tar' "
+}
+
 def promoteAPIToEnv(artifactName, releasedVersion, PROP_ENV, destinationIP) {
 		sh """
 				ssh centos@${destinationIP} 'sudo su &&  docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -d -p 8099:8090 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
