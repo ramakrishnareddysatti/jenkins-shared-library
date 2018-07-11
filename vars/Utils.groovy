@@ -122,6 +122,8 @@ def saveImage(applicationDir, distroDirPath, artifactName, releasedVersion, GIT_
 def saveImageToFS(applicationDir, distroDirPath, artifactName, releasedVersion) {
 	sshagent (credentials: ['git-repo-ssh-access']) {
 		sh "docker images"
+
+		// Remove SNAPSHOT images in Jenkins box
 		dir (distroDirPath) {
 			if(fileExists('*SNAPSHOT*.tar')) {
 				sh 'ls && rm -rf *SNAPSHOT*.tar'
@@ -129,6 +131,7 @@ def saveImageToFS(applicationDir, distroDirPath, artifactName, releasedVersion) 
 				echo "NO SNAPSHOT IMAGES IN ${applicationDir}"	
 			}
 		}
+
 		dir (applicationDir) {
 			//docker save -o <path for generated tar file> <existing image name>
 			if (applicationDir == 'demandplannerapi') {
@@ -189,7 +192,7 @@ def loadImage(distroDirPath, artifactName, releasedVersion, destinationIP) {
 	 }
 	 */
 	 
-	   // BE CAREFUL WHILE DOING THIS. IT'S GOING TO REMOVE ALL THE *PREVIOUS* TAR(UI AND API) FILES
+	   // BE CAREFUL WHILE DOING THIS. IT'S GOING TO REMOVE ALL THE **PREVIOUS** TAR(UI AND API) FILES
 		// To Remove SNAPSHOT TAR Files
 		try {
 			sh "ssh centos@${destinationIP} 'ls && rm *${artifactName}*.tar ' "
@@ -261,9 +264,9 @@ def promoteUIToEnv(artifactName, releasedVersion, PROP_ENV, destinationIP) {
 
 def sendEmailNotification(subjectText, bodyText) {
 	
-	subjectText = "JENKINS Notification : Successful Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'"
-	bodyText = """ <p>Successful: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]':</p><p>Check console output at "<a href="${env.BUILD_URL}">${env.JOB_NAME} [${env.BUILD_NUMBER}]</a>"</p>"""
-	
+	//subjectText = "JENKINS Notification : Successful Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'"
+	//bodyText = """ <p>Successful: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]':</p><p>Check console output at "<a href="${env.BUILD_URL}">${env.JOB_NAME} [${env.BUILD_NUMBER}]</a>"</p>"""
+	def mailRecipients = 'r.satti@accenture.com, suresh.kumar.sahoo@accenture.com'
 	emailext(
 				subject: subjectText,
 				body: bodyText,
