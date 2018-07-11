@@ -205,7 +205,7 @@ def loadImage(distroDirPath, artifactName, releasedVersion, destinationIP) {
 }
 
 def loadImageInProd(distroDirPath, artifactName, releasedVersion, destinationIP) {
-	sh "scp -Cp ${distroDirPath}/${artifactName}-${releasedVersion}.tar centos@${destinationIP}:/home/centos"
+	sh "scp -Cp ${distroDirPath}/${artifactName}-${releasedVersion} centos@${destinationIP}:/home/centos"
 	sh "ssh centos@${destinationIP} 'ls && sudo docker load -i ${artifactName}-${releasedVersion}.tar' "
 }
 
