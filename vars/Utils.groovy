@@ -123,7 +123,7 @@ def saveImageToFS(applicationDir, distroDirPath, artifactName, releasedVersion) 
 	sshagent (credentials: ['git-repo-ssh-access']) {
 		sh "docker images"
 		dir (distroDirPath) {
-			if(!fileExists('*SNAPSHOT*.tar')) {
+			if(fileExists('*SNAPSHOT*.tar')) {
 				sh 'ls && rm -rf *SNAPSHOT*.tar'
 			} else {
 				echo "NO SNAPSHOT IMAGES IN ${applicationDir}"	
