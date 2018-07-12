@@ -214,12 +214,7 @@ def promoteAPIToEnv(artifactName, releasedVersion, PROP_ENV, destinationIP) {
 				ssh centos@${destinationIP} 'sudo su &&  docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -v /var/logs/demandplannerapi:/var/logs -d -p 8099:8090 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
 				"""
 }
-//TODO:  ACTUAL CODE, REMOVE LATER
-def promoteAPIToQA(artifactName, releasedVersion, PROP_ENV, destinationIP) {
-		sh """
-				ssh centos@${destinationIP} 'sudo su &&  docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -d -p 8099:8090 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
-				"""
-}
+
 /* ################################  UI Utility Methods ############################### */
 
 //This stage installs all of the node dependencies, performs linting and builds the code.
