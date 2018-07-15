@@ -122,7 +122,8 @@ def saveImage(applicationDir, distroDirPath, artifactName, releasedVersion, GIT_
 def saveImageToFS(applicationDir, distroDirPath, artifactName, releasedVersion) {
 	sshagent (credentials: ['git-repo-ssh-access']) {
 		sh "docker images"
-		// TODO: not working as it supposed to : LOOK FOR EXAMPLES
+
+		// Remove SNAPSHOT images in Jenkins box
 		dir (distroDirPath) {
 			def files = findFiles glob: '**/*SNAPSHOT*.tar'
 			boolean exists = files.length > 0
@@ -200,6 +201,11 @@ def loadImage(distroDirPath, artifactName, releasedVersion, destinationIP) {
 			echo "${error}"
 		}
 	
+	sh "scp -Cp ${distroDirPath}/${artifactName}-${releasedVersion}.tar centos@${destinationIP}:/home/centos"
+	sh "ssh centos@${destinationIP} 'ls && sudo docker load -i ${artifactName}-${releasedVersion}.tar' "
+}
+
+def loadImageInProd(distroDirPath, artifactName, releasedVersion, destinationIP) {
 	sh "scp -Cp ${distroDirPath}/${artifactName}-${releasedVersion}.tar centos@${destinationIP}:/home/centos"
 	sh "ssh centos@${destinationIP} 'ls && sudo docker load -i ${artifactName}-${releasedVersion}.tar' "
 }
