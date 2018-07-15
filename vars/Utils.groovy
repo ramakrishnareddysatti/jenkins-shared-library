@@ -126,17 +126,12 @@ def saveImageToFS(applicationDir, distroDirPath, artifactName, releasedVersion) 
 		// Remove SNAPSHOT images in Jenkins box
 		dir (distroDirPath) {
 			if(fileExists('*SNAPSHOT*.tar')) {
-
-			def files = findFiles glob: '**/*SNAPSHOT*.tar'
-			boolean exists = files.length > 0
-			
-			if(exists) {
 				sh 'ls && rm -rf *SNAPSHOT*.tar'
 			} else {
 				echo "NO SNAPSHOT IMAGES of ${applicationDir} in ${distroDirPath}"	
 			}
-			}
 		}
+		
 		dir (applicationDir) {
 			//docker save -o <path for generated tar file> <existing image name>
 			if (applicationDir == 'demandplannerapi') {
@@ -278,10 +273,7 @@ def sendEmailNotification(subjectText, bodyText) {
 	//bodyText = """ <p>Successful: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]':</p><p>Check console output at "<a href="${env.BUILD_URL}">${env.JOB_NAME} [${env.BUILD_NUMBER}]</a>"</p>"""
 	def mailRecipients = 'r.satti@accenture.com, suresh.kumar.sahoo@accenture.com'
 	
-	subjectText = "JENKINS Notification : Successful Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'"
-	bodyText = """ <p>Successful: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]':</p><p>Check console output at "<a href="${env.BUILD_URL}">${env.JOB_NAME} [${env.BUILD_NUMBER}]</a>"</p>"""
 	
-	/*  TODO: commenting for the time being, as the build failes
 	emailext(
 				subject: subjectText,
 				body: bodyText,
@@ -289,9 +281,6 @@ def sendEmailNotification(subjectText, bodyText) {
 				to: "${mailRecipients}",
 				replyTo: "${mailRecipients}"
 			)
-
-	*/
-
 }
 
 def sendNotification(buildStatus) {
