@@ -125,7 +125,9 @@ def saveImageToFS(applicationDir, distroDirPath, artifactName, releasedVersion) 
 
 		// Remove SNAPSHOT images in Jenkins box
 		dir (distroDirPath) {
-			if(fileExists('*SNAPSHOT*.tar')) {
+			def files = findFiles glob: '**/*SNAPSHOT*.tar'
+			boolean exists = files.length > 0
+			if(exists) {
 				sh 'ls && rm -rf *SNAPSHOT*.tar'
 			} else {
 				echo "NO SNAPSHOT IMAGES IN ${applicationDir}"	
