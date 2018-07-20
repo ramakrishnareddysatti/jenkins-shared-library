@@ -81,7 +81,7 @@ def sourceCodeCheckout(applicationDir, branchName, repoUrl, distroDirPath, distr
 def removeDanglingImages(artifactName, serverIP) {
 	try{
 		sh """
-			ssh centos@${serverIP} 'sudo su && docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi && 
+			ssh r.satti@${serverIP} 'docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi && 
 			docker images | grep SNAPSHOT | tr -s " " | cut -d " " -f 3 | xargs --no-run-if-empty docker rmi' 
 			"""
 	} catch(error) {
@@ -179,7 +179,7 @@ def saveImageToRepo(applicationDir, distroDirPath, artifactName, releasedVersion
 def stopContainer(artifactName, serverIP) {
 	try{
 		sh """
-			ssh centos@${serverIP} 'sudo su && docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker stop {} &&
+			ssh r.satti@${serverIP} 'docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker stop {} &&
 			docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker rm {}' 
 			"""
 	} catch(error) {
@@ -197,23 +197,23 @@ def loadImage(distroDirPath, artifactName, releasedVersion, serverIP) {
 	   // BE CAREFUL WHILE DOING THIS. IT'S GOING TO REMOVE ALL THE **PREVIOUS** TAR(UI AND API) FILES
 		// To Remove SNAPSHOT TAR Files
 		try {
-			sh "ssh centos@${serverIP} 'ls && rm *${artifactName}*.tar ' "
+			sh "ssh r.satti@${serverIP} 'ls && rm *${artifactName}*.tar ' "
 		} catch(error) {
 			echo "${error}"
 		}
-	
-	sh "scp -Cp ${distroDirPath}/${artifactName}-${releasedVersion}.tar centos@${serverIP}:/home/centos"
-	sh "ssh centos@${serverIP} 'ls && sudo docker load -i ${artifactName}-${releasedVersion}.tar' "
+	// service account c_rsatti -- add password less ssh(/hom/rsat/.ssh) ssh key gen 
+	sh "scp -Cp ${distroDirPath}/${artifactName}-${releasedVersion}.tar r.satti@${serverIP}:/home/r.satti"
+	sh "ssh r.satti@${serverIP} 'ls && docker load -i ${artifactName}-${releasedVersion}.tar' "
 }
 
 def loadImageInProd(distroDirPath, artifactName, releasedVersion, serverIP) {
-	sh "scp -Cp ${distroDirPath}/${artifactName}-${releasedVersion}.tar centos@${serverIP}:/home/centos"
-	sh "ssh centos@${serverIP} 'ls && sudo docker load -i ${artifactName}-${releasedVersion}.tar' "
+	sh "scp -Cp ${distroDirPath}/${artifactName}-${releasedVersion}.tar r.satti@${serverIP}:/home/r.satti"
+	sh "ssh r.satti@${serverIP} 'ls && docker load -i ${artifactName}-${releasedVersion}.tar' "
 }
 
 def promoteAPIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP) {
 		sh """
-				ssh centos@${serverIP} 'sudo su &&  docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -v /var/logs/demandplannerapi:/var/logs -d -p 8099:8090 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
+				ssh r.satti@${serverIP} 'docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -v /var/logs/demandplannerapi:/var/logs -d -p 8099:8090 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
 				"""
 }
 
@@ -265,7 +265,7 @@ def uiDockerBuild(applicationDir, artifactName, releasedVersion) {
 
 def promoteUIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP) {
 		sh """
-				ssh centos@${serverIP} 'sudo su &&	docker run -e \'APP_ENV=${PROP_ENV}\' -d -p 8098:80 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
+				ssh r.satti@${serverIP} 'docker run -e \'APP_ENV=${PROP_ENV}\' -d -p 8098:80 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
 			"""
 }
 
