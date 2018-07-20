@@ -187,7 +187,7 @@ def stopContainer(artifactName, serverIP) {
 	}
 }
 
-def loadImage(distroDirPath, artifactName, releasedVersion, destinationIP) {
+def loadImage(distroDirPath, artifactName, releasedVersion, serverIP) {
 	/*
 	 timeout(activity: true, time: 20, unit: 'SECONDS') {
 	 input message: 'Save to QA Env?', ok: 'Save'
@@ -197,23 +197,23 @@ def loadImage(distroDirPath, artifactName, releasedVersion, destinationIP) {
 	   // BE CAREFUL WHILE DOING THIS. IT'S GOING TO REMOVE ALL THE **PREVIOUS** TAR(UI AND API) FILES
 		// To Remove SNAPSHOT TAR Files
 		try {
-			sh "ssh centos@${destinationIP} 'ls && rm *${artifactName}*.tar ' "
+			sh "ssh centos@${serverIP} 'ls && rm *${artifactName}*.tar ' "
 		} catch(error) {
 			echo "${error}"
 		}
 	
-	sh "scp -Cp ${distroDirPath}/${artifactName}-${releasedVersion}.tar centos@${destinationIP}:/home/centos"
-	sh "ssh centos@${destinationIP} 'ls && sudo docker load -i ${artifactName}-${releasedVersion}.tar' "
+	sh "scp -Cp ${distroDirPath}/${artifactName}-${releasedVersion}.tar centos@${serverIP}:/home/centos"
+	sh "ssh centos@${serverIP} 'ls && sudo docker load -i ${artifactName}-${releasedVersion}.tar' "
 }
 
-def loadImageInProd(distroDirPath, artifactName, releasedVersion, destinationIP) {
-	sh "scp -Cp ${distroDirPath}/${artifactName}-${releasedVersion}.tar centos@${destinationIP}:/home/centos"
-	sh "ssh centos@${destinationIP} 'ls && sudo docker load -i ${artifactName}-${releasedVersion}.tar' "
+def loadImageInProd(distroDirPath, artifactName, releasedVersion, serverIP) {
+	sh "scp -Cp ${distroDirPath}/${artifactName}-${releasedVersion}.tar centos@${serverIP}:/home/centos"
+	sh "ssh centos@${serverIP} 'ls && sudo docker load -i ${artifactName}-${releasedVersion}.tar' "
 }
 
-def promoteAPIToEnv(artifactName, releasedVersion, PROP_ENV, destinationIP) {
+def promoteAPIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP) {
 		sh """
-				ssh centos@${destinationIP} 'sudo su &&  docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -v /var/logs/demandplannerapi:/var/logs -d -p 8099:8090 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
+				ssh centos@${serverIP} 'sudo su &&  docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -v /var/logs/demandplannerapi:/var/logs -d -p 8099:8090 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
 				"""
 }
 
@@ -263,9 +263,9 @@ def uiDockerBuild(applicationDir, artifactName, releasedVersion) {
 	}
 }
 
-def promoteUIToEnv(artifactName, releasedVersion, PROP_ENV, destinationIP) {
+def promoteUIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP) {
 		sh """
-				ssh centos@${destinationIP} 'sudo su &&	docker run -e \'APP_ENV=${PROP_ENV}\' -d -p 8098:80 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
+				ssh centos@${serverIP} 'sudo su &&	docker run -e \'APP_ENV=${PROP_ENV}\' -d -p 8098:80 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
 			"""
 }
 
