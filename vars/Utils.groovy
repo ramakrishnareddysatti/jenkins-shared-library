@@ -127,7 +127,7 @@ def pushImage(artifactName, releasedVersion, dockerRegistryIP) {
 	echo "pushImage: releasedVersion: ${releasedVersion}"
 
 	sh """
-		docker tag ${artifactName} ${dockerRegistryIP}:5000/${artifactName}
+		docker tag ${artifactName}:${releasedVersion} ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}
 		docker push ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}
 	"""
 }
