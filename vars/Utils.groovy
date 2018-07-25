@@ -75,7 +75,7 @@ def sourceCodeCheckout(applicationDir, branchName, repoUrl, distroDirPath, distr
 }
 
 /*
- * Responsible to remove "dangling images" and application "SNAPSHOT" images (if exists).
+ * Responsible to remove "dangling images" and application "snapshot" images (if exists).
  *
  */
 def removeDanglingImages(artifactName, serverIP) {
@@ -83,12 +83,12 @@ def removeDanglingImages(artifactName, serverIP) {
 		/*
 		sh """
 			ssh centos@${serverIP} 'sudo su && docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi && 
-			docker images | grep SNAPSHOT | tr -s " " | cut -d " " -f 3 | xargs --no-run-if-empty docker rmi' 
+			docker images | grep snapshot | tr -s " " | cut -d " " -f 3 | xargs --no-run-if-empty docker rmi' 
 			"""
 		*/
 		sh """
 			ssh centos@${serverIP} 'docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi && 
-			docker images | grep SNAPSHOT | tr -s " " | cut -d " " -f 3 | xargs --no-run-if-empty docker rmi' 
+			docker images | grep snapshot | tr -s " " | cut -d " " -f 3 | xargs --no-run-if-empty docker rmi' 
 			"""	
 	} catch(error) {
 		echo "${error}"
@@ -96,14 +96,14 @@ def removeDanglingImages(artifactName, serverIP) {
 }
 
 /*
- * Responsible to remove "dangling images" and application "SNAPSHOT" images (if exists) from JENKINS BOX.
+ * Responsible to remove "dangling images" and application "snapshot" images (if exists) from JENKINS BOX.
  */ 
 def removeImages(artifactName) {
 
 	try{
 		sh """
 			docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi && 
-			docker images | grep SNAPSHOT | tr -s " " | cut -d " " -f 3 | xargs --no-run-if-empty docker rmi
+			docker images | grep snapshot | tr -s " " | cut -d " " -f 3 | xargs --no-run-if-empty docker rmi
 		"""
 	} catch(error) {
 		echo "${error}"
@@ -140,14 +140,14 @@ def saveImageToFS(applicationDir, distroDirPath, artifactName, releasedVersion) 
 	sshagent (credentials: ['git-repo-ssh-access']) {
 		sh "docker images"
 
-		// Remove SNAPSHOT images in Jenkins box
+		// Remove snapshot images in Jenkins box
 		dir (distroDirPath) {
-			def files = findFiles glob: '**/*SNAPSHOT*.tar'
+			def files = findFiles glob: '**/*snapshot*.tar'
 			boolean exists = files.length > 0
 			if(exists) {
-				sh 'ls && rm -rf *SNAPSHOT*.tar'
+				sh 'ls && rm -rf *snapshot*.tar'
 			} else {
-				echo "NO SNAPSHOT IMAGES IN ${applicationDir}"	
+				echo "NO snapshot IMAGES IN ${applicationDir}"	
 			}
 		}
 
@@ -219,7 +219,7 @@ def loadImage(distroDirPath, artifactName, releasedVersion, serverIP) {
 	 */
 	 
 	   // BE CAREFUL WHILE DOING THIS. IT'S GOING TO REMOVE ALL THE **PREVIOUS** TAR(UI AND API) FILES
-		// To Remove SNAPSHOT TAR Files
+		// To Remove snapshot TAR Files
 		try {
 			sh "ssh centos@${serverIP} 'ls && rm *${artifactName}*.tar ' "
 		} catch(error) {
