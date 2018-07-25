@@ -115,6 +115,17 @@ def saveImage(applicationDir, distroDirPath, artifactName, releasedVersion, GIT_
 		}
 }
 
+def pushImage(artifactName, releasedVersion) {
+	def dockerRegistryIP = "10.0.31.225"
+
+	echo "pushImage: artifactName: ${artifactName}"
+	echo "pushImage: releasedVersion: ${releasedVersion}"
+
+	sh """
+		docker tag ${artifactName}:${releasedVersion} ${dockerRegistryIP}:5000/${artifactName}
+		docker push ${dockerRegistryIP}:5000/${artifactName}
+	"""
+}
 
 /*
  * Save one or more images to a tar archive and copy to distro path.
@@ -260,6 +271,7 @@ def uiDockerBuild(applicationDir, artifactName, releasedVersion) {
 		echo "Starting Docker Image Creation..."
 		sh "docker build -t ${artifactName}:${releasedVersion} ."
 		echo "Docker Image Creation Complted..."
+		sh "docker images"
 	}
 }
 
