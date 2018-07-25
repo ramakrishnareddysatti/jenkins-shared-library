@@ -242,7 +242,7 @@ def promoteAPIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP) {
 
 def promoteAPIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP, dockerRegistryIP) {
 		sh """
-				ssh centos@${serverIP} 'sudo su &&  docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -v /var/logs/demandplannerapi:/var/logs -d -p 8099:8090 --name ${artifactName} -t ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
+				ssh centos@${serverIP} 'docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -v /var/logs/demandplannerapi:/var/logs -d -p 8099:8090 --name ${artifactName} -t ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
 				"""
 }
 
@@ -295,7 +295,13 @@ def uiDockerBuild(applicationDir, artifactName, releasedVersion) {
 
 def promoteUIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP) {
 		sh """
-				ssh centos@${serverIP} 'sudo su &&	docker run -e \'APP_ENV=${PROP_ENV}\' -d -p 8098:80 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
+				ssh centos@${serverIP} 'sudo su &&  docker run -e \'APP_ENV=${PROP_ENV}\' -d -p 8098:80 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
+			"""
+}
+
+def promoteUIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP, dockerRegistryIP) {
+		sh """
+				ssh centos@${serverIP} 'docker run -e \'APP_ENV=${PROP_ENV}\' -d -p 8098:80 --name ${artifactName} -t ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
 			"""
 }
 
