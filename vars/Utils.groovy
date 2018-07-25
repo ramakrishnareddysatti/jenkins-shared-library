@@ -124,8 +124,6 @@ def saveImage(applicationDir, distroDirPath, artifactName, releasedVersion, GIT_
 def pushImage(artifactName, releasedVersion) {
 	def dockerRegistryIP = "10.0.31.225"
 
-	tag does not exist: 10.0.31.225:5000/qualcomm-ms-demandplanner:0.SNAPSHOT.83
-
 	echo "pushImage: artifactName: ${artifactName}"
 	echo "pushImage: releasedVersion: ${releasedVersion}"
 
