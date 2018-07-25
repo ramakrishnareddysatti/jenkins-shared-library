@@ -121,15 +121,14 @@ def saveImage(applicationDir, distroDirPath, artifactName, releasedVersion, GIT_
 		}
 }
 
-def pushImage(artifactName, releasedVersion) {
-	def dockerRegistryIP = "10.0.31.225"
-
+def pushImage(artifactName, releasedVersion, dockerRegistryIP) {
+	
 	echo "pushImage: artifactName: ${artifactName}"
 	echo "pushImage: releasedVersion: ${releasedVersion}"
 
 	sh """
 		docker tag ${artifactName}:${releasedVersion} ${dockerRegistryIP}:5000/${artifactName}
-		docker push ${dockerRegistryIP}:5000/${artifactName}
+		docker push ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}
 	"""
 }
 
@@ -238,6 +237,12 @@ def loadImageInProd(distroDirPath, artifactName, releasedVersion, serverIP) {
 def promoteAPIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP) {
 		sh """
 				ssh centos@${serverIP} 'sudo su &&  docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -v /var/logs/demandplannerapi:/var/logs -d -p 8099:8090 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
+				"""
+}
+
+def promoteAPIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP, dockerRegistryIP) {
+		sh """
+				ssh centos@${serverIP} 'sudo su &&  docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -v /var/logs/demandplannerapi:/var/logs -d -p 8099:8090 --name ${artifactName} -t ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
 				"""
 }
 
