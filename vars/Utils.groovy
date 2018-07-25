@@ -80,10 +80,16 @@ def sourceCodeCheckout(applicationDir, branchName, repoUrl, distroDirPath, distr
  */
 def removeDanglingImages(artifactName, serverIP) {
 	try{
+		/*
 		sh """
 			ssh centos@${serverIP} 'sudo su && docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi && 
 			docker images | grep SNAPSHOT | tr -s " " | cut -d " " -f 3 | xargs --no-run-if-empty docker rmi' 
 			"""
+		*/
+		sh """
+			ssh centos@${serverIP} 'docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi && 
+			docker images | grep SNAPSHOT | tr -s " " | cut -d " " -f 3 | xargs --no-run-if-empty docker rmi' 
+			"""	
 	} catch(error) {
 		echo "${error}"
 	}
@@ -120,10 +126,6 @@ def pushImage(artifactName, releasedVersion) {
 
 	echo "pushImage: artifactName: ${artifactName}"
 	echo "pushImage: releasedVersion: ${releasedVersion}"
-
-	// docker push [OPTIONS] NAME[:TAG]
-	// docker tag ${artifactName}:${releasedVersion} ${dockerRegistryIP}:5000/${artifactName}
-
 	sh """
 		docker push ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}
 	"""
@@ -191,10 +193,17 @@ def saveImageToRepo(applicationDir, distroDirPath, artifactName, releasedVersion
  */
 def stopContainer(artifactName, serverIP) {
 	try{
+		/*
 		sh """
 			ssh centos@${serverIP} 'sudo su && docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker stop {} &&
 			docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker rm {}' 
 			"""
+		*/
+
+		sh """
+			ssh centos@${serverIP} 'docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker stop {} &&
+			docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker rm {}' 
+			"""	
 	} catch(error) {
 		echo "${error}"
 	}
