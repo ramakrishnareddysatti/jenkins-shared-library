@@ -234,6 +234,16 @@ def loadImageInProd(distroDirPath, artifactName, releasedVersion, serverIP) {
 	sh "ssh centos@${serverIP} 'ls && sudo docker load -i ${artifactName}-${releasedVersion}.tar' "
 }
 
+def apiDockerBuild(applicationDir, artifactName, releasedVersion) {
+	dir(applicationDir) {
+		echo "Starting Docker Image Creation..."
+		sh "sh docker build --build-arg jar_file=${artifactName}:${releasedVersion} -t ${artifactName}:${releasedVersion} ."
+		echo "Docker Image Creation Complted..."
+		sh "docker images"
+	}
+}
+
+
 def promoteAPIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP) {
 		sh """
 				ssh centos@${serverIP} 'sudo su &&  docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -v /var/logs/demandplannerapi:/var/logs -d -p 8099:8090 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
