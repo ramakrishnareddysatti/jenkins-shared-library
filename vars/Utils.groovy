@@ -142,13 +142,17 @@ def saveImageToFS(applicationDir, distroDirPath, artifactName, releasedVersion) 
 		dir (applicationDir) {
 			//docker save -o <path for generated tar file> <existing image name>
 			if (applicationDir == 'demandplannerapi') {
-				sh "docker save -o target/${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
+				//sh "docker save -o target/${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
+				sh "docker save -o target/${artifactName}.tar ${artifactName}:${releasedVersion}"
 				echo "Copying demandplannerapi tar file to ${distroDirPath}"
-				sh "cp -rf target/${artifactName}-${releasedVersion}.tar ${distroDirPath}"
+				//sh "cp -rf target/${artifactName}-${releasedVersion}.tar ${distroDirPath}"
+				sh "cp -rf target/${artifactName}.tar ${distroDirPath}"
 			} else if (applicationDir == 'demandplannerui') {
-				sh "docker save -o ${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
+				//sh "docker save -o ${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
+				sh "docker save -o ${artifactName}.tar ${artifactName}:${releasedVersion}"
 				echo "Copying demandplannerui tar file to ${distroDirPath}"
-				sh "cp -rf ${artifactName}-${releasedVersion}.tar ${distroDirPath}"
+				//sh "cp -rf ${artifactName}-${releasedVersion}.tar ${distroDirPath}"
+				sh "cp -rf ${artifactName}.tar ${distroDirPath}"
 			}
 		}
 	}
