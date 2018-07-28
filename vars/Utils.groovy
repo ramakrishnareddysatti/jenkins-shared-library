@@ -121,17 +121,6 @@ def saveImage(applicationDir, distroDirPath, artifactName, releasedVersion, GIT_
 		}
 }
 
-def pushImage(artifactName, releasedVersion, dockerRegistryIP) {
-	
-	echo "pushImage: artifactName: ${artifactName}"
-	echo "pushImage: releasedVersion: ${releasedVersion}"
-
-	sh """
-		docker tag ${artifactName}:${releasedVersion} ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}
-		docker push ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}
-	"""
-}
-
 /*
  * Save one or more images to a tar archive and copy to distro path.
  */
@@ -176,18 +165,31 @@ def saveImageToRepo(applicationDir, distroDirPath, artifactName, releasedVersion
 	// Overwrite version.txt with new version
 	sh "echo ${releasedVersion} > ${distroDirPath}/version.txt"
 
-	
+	// git add ${artifactName}-${releasedVersion}.tar
+	// git add version.txt
 	sshagent (credentials: ['git-repo-ssh-access']) {
 		dir (distroDirPath) {
 			sh """
-				git add version.txt
-				git add ${artifactName}-${releasedVersion}.tar
-				git commit -m "Jenkins Job:${JOB_NAME} pushing image tar and version file"
+				git add ${artifactName}.tar
+				git commit -m "Jenkins Job:${JOB_NAME} pushing image tar file with released Version:${artifactName}-${releasedVersion}"
 				git push origin HEAD:master
 			"""
 		}
 	}
 }
+
+def pushImage(artifactName, releasedVersion, dockerRegistryIP) {
+	
+	echo "pushImage: artifactName: ${artifactName}"
+	echo "pushImage: releasedVersion: ${releasedVersion}"
+
+	sh """
+		docker tag ${artifactName}:${releasedVersion} ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}
+		docker push ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}
+	"""
+}
+
+
 
 /*
  * Stop and Remove Container (if exists)
@@ -226,12 +228,12 @@ def loadImage(distroDirPath, artifactName, releasedVersion, serverIP) {
 		}
 	
 	sh "scp -Cp ${distroDirPath}/${artifactName}-${releasedVersion}.tar centos@${serverIP}:/home/centos"
-	sh "ssh centos@${serverIP} 'ls && sudo docker load -i ${artifactName}-${releasedVersion}.tar' "
+	sh "ssh centos@${serverIP} 'ls && docker load -i ${artifactName}-${releasedVersion}.tar' "
 }
 
 def loadImageInProd(distroDirPath, artifactName, releasedVersion, serverIP) {
 	sh "scp -Cp ${distroDirPath}/${artifactName}-${releasedVersion}.tar centos@${serverIP}:/home/centos"
-	sh "ssh centos@${serverIP} 'ls && sudo docker load -i ${artifactName}-${releasedVersion}.tar' "
+	sh "ssh centos@${serverIP} 'ls && docker load -i ${artifactName}-${releasedVersion}.tar' "
 }
 
 def apiDockerBuild(applicationDir, artifactName, releasedVersion) {
@@ -246,7 +248,7 @@ def apiDockerBuild(applicationDir, artifactName, releasedVersion) {
 
 def promoteAPIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP) {
 		sh """
-				ssh centos@${serverIP} 'sudo su &&  docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -v /var/logs/demandplannerapi:/var/logs -d -p 8099:8090 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
+				ssh centos@${serverIP} 'docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -v /var/logs/demandplannerapi:/var/logs -d -p 8099:8090 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
 				"""
 }
 
@@ -305,7 +307,7 @@ def uiDockerBuild(applicationDir, artifactName, releasedVersion) {
 
 def promoteUIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP) {
 		sh """
-				ssh centos@${serverIP} 'sudo su &&  docker run -e \'APP_ENV=${PROP_ENV}\' -d -p 8098:80 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
+				ssh centos@${serverIP} 'docker run -e \'APP_ENV=${PROP_ENV}\' -d -p 8098:80 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
 			"""
 }
 
