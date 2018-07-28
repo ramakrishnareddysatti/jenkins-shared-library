@@ -237,10 +237,10 @@ def loadImageInProd(distroDirPath, artifactName, releasedVersion, serverIP) {
 def apiDockerBuild(applicationDir, artifactName, releasedVersion) {
 	dir(applicationDir) {
 		echo "Starting Docker Image Creation..."
-		sh "sh docker build --build-arg jar_file=${artifactName}:${releasedVersion} -t ${artifactName}:${releasedVersion} ."
+		sh "sh docker build --build-arg jar_file=target/${artifactName}:${releasedVersion}.jar -t ${artifactName}:${releasedVersion} ."
 		echo "Docker Image Creation Complted..."
-		sh "docker images"
 	}
+	sh "docker images"
 }
 
 
