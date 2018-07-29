@@ -217,12 +217,6 @@ def stopContainer(artifactName, serverIP) {
 }
 
 def loadImage(distroDirPath, artifactName, releasedVersion, serverIP) {
-	/*
-	 timeout(activity: true, time: 20, unit: 'SECONDS') {
-	 input message: 'Save to QA Env?', ok: 'Save'
-	 }
-	 */
-	 
 	   // BE CAREFUL WHILE DOING THIS. IT'S GOING TO REMOVE ALL THE **PREVIOUS** TAR(UI AND API) FILES
 		// To Remove snapshot TAR Files
 		try {
@@ -231,12 +225,14 @@ def loadImage(distroDirPath, artifactName, releasedVersion, serverIP) {
 			echo "${error}"
 		}
 	
-	sh "scp -Cp ${distroDirPath}/${artifactName}-${releasedVersion}.tar centos@${serverIP}:/home/centos"
-	sh "ssh centos@${serverIP} 'ls && docker load -i ${artifactName}-${releasedVersion}.tar' "
+	//sh "scp -Cp ${distroDirPath}/${artifactName}-${releasedVersion}.tar centos@${serverIP}:/home/centos"
+	//sh "ssh centos@${serverIP} 'ls && docker load -i ${artifactName}-${releasedVersion}.tar' "
+	sh "scp ${distroDirPath}/${artifactName}.tar centos@${serverIP}:/home/centos"
+	sh "ssh centos@${serverIP} 'ls && docker load -i ${artifactName}.tar' "
 }
 
 def loadImageInProd(distroDirPath, artifactName, releasedVersion, serverIP) {
-	sh "scp -Cp ${distroDirPath}/${artifactName}-${releasedVersion}.tar centos@${serverIP}:/home/centos"
+	sh "scp ${distroDirPath}/${artifactName}-${releasedVersion}.tar centos@${serverIP}:/home/centos"
 	sh "ssh centos@${serverIP} 'ls && docker load -i ${artifactName}-${releasedVersion}.tar' "
 }
 
