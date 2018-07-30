@@ -254,7 +254,7 @@ def promoteAPIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP, userId) {
 				"""
 }
 
-def promoteAPIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP, dockerRegistryIP) {
+def promoteAPIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP, dockerRegistryIP, userId) {
 		sh """
 				ssh ${userId}@${serverIP} 'docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -v /var/logs/demandplannerapi:/var/logs -d -p 8099:8090 --name ${artifactName} -t ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
 				"""
