@@ -121,6 +121,14 @@ def saveImage(applicationDir, distroDirPath, artifactName, releasedVersion, GIT_
 		}
 }
 
+def saveCommmonArtifact(applicationDir, distroDirPath, artifactName, releasedVersion, GIT_IMAGE_PUSH) {
+	if (GIT_IMAGE_PUSH.toBoolean()) {
+		echo "Save Common Jar to Git Repo"
+		saveImageToRepo(applicationDir, distroDirPath, artifactName, releasedVersion)
+	}	
+}
+
+
 /*
  * Save one or more images to a tar archive and copy to distro path.
  */
@@ -165,17 +173,11 @@ def saveImageToRepo(applicationDir, distroDirPath, artifactName, releasedVersion
 	echo "artifactName: ${artifactName}"
 	echo "releasedVersion: ${releasedVersion}"
 	
-	echo "creating ${distroDirPath}/version.txt"
-	// Overwrite version.txt with new version
-	sh "echo ${releasedVersion} > ${distroDirPath}/version.txt"
-
-	// git add ${artifactName}-${releasedVersion}.tar
-	// git add version.txt
 	sshagent (credentials: ['git-repo-ssh-access']) {
 		dir (distroDirPath) {
 			sh """
 				git add ${artifactName}.tar
-				git commit -m "Jenkins Job:${JOB_NAME} pushing image tar file with released Version:${artifactName}-${releasedVersion}"
+				git commit -m "Jenkins Job:${JOB_NAME} pushing jar/tar file with released Version:${artifactName}-${releasedVersion}"
 				git push origin HEAD:master
 			"""
 		}
@@ -227,12 +229,12 @@ def loadImage(distroDirPath, artifactName, releasedVersion, serverIP) {
 	
 	//sh "scp -Cp ${distroDirPath}/${artifactName}-${releasedVersion}.tar centos@${serverIP}:/home/centos"
 	//sh "ssh centos@${serverIP} 'ls && docker load -i ${artifactName}-${releasedVersion}.tar' "
-	sh "scp ${distroDirPath}/${artifactName}.tar centos@${serverIP}:/home/centos"
+	sh "scp -C ${distroDirPath}/${artifactName}.tar centos@${serverIP}:/home/centos"
 	sh "ssh centos@${serverIP} 'ls && docker load -i ${artifactName}.tar' "
 }
 
 def loadImageInProd(distroDirPath, artifactName, releasedVersion, serverIP) {
-	sh "scp ${distroDirPath}/${artifactName}-${releasedVersion}.tar centos@${serverIP}:/home/centos"
+	sh "scp -C ${distroDirPath}/${artifactName}-${releasedVersion}.tar centos@${serverIP}:/home/centos"
 	sh "ssh centos@${serverIP} 'ls && docker load -i ${artifactName}-${releasedVersion}.tar' "
 }
 
