@@ -114,7 +114,7 @@ def saveImage(applicationDir, distroDirPath, artifactName, releasedVersion, GIT_
 		if (GIT_IMAGE_PUSH.toBoolean()) {
 			echo "Save Image to Tar Archive and pushing Tar to Git Repo"
 			saveImageToFS(applicationDir, distroDirPath, artifactName, releasedVersion)
-			saveImageToRepo(applicationDir, distroDirPath, artifactName, releasedVersion)
+			saveImageToRepo(distroDirPath, artifactName, releasedVersion)
 		} else {
 			echo "Save Image to Tar Archive and Copy image to ${distroDirPath}"
 			saveImageToFS(applicationDir, distroDirPath, artifactName, releasedVersion)
@@ -124,7 +124,10 @@ def saveImage(applicationDir, distroDirPath, artifactName, releasedVersion, GIT_
 def saveCommmonArtifact(applicationDir, distroDirPath, artifactName, releasedVersion, GIT_IMAGE_PUSH) {
 	if (GIT_IMAGE_PUSH.toBoolean()) {
 		echo "Save Common Jar to Git Repo"
-		saveImageToRepo(applicationDir, distroDirPath, artifactName, releasedVersion)
+		dir (applicationDir) {
+			sh "cp -rf target/${artifactName}-${releasedVersion}.jar ${distroDirPath}"
+		}
+		saveImageToRepo(distroDirPath, artifactName, releasedVersion)
 	}	
 }
 
@@ -169,7 +172,7 @@ def saveImageToFS(applicationDir, distroDirPath, artifactName, releasedVersion) 
 /*
  * Save one or more images to a tar archive and push to repo.
  */
-def saveImageToRepo(applicationDir, distroDirPath, artifactName, releasedVersion) {
+def saveImageToRepo(distroDirPath, artifactName, releasedVersion) {
 	echo "artifactName: ${artifactName}"
 	echo "releasedVersion: ${releasedVersion}"
 	
