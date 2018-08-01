@@ -132,7 +132,7 @@ def saveCommmonArtifact(applicationDir, distroDirPath, artifactName, releasedVer
 		dir (distroDirPath) {
 			sh """
 				mv ${artifactName}-${releasedVersion}.jar ${artifactName}.jar
-				git ${artifactName}.jar
+				git add ${artifactName}.jar
 				git commit -m "Jenkins Job:${JOB_NAME} pushing jar file with released Version:${artifactName}-${releasedVersion}"
 				git push origin HEAD:master
 			"""
