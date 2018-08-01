@@ -129,15 +129,15 @@ def saveCommmonArtifact(applicationDir, distroDirPath, artifactName, releasedVer
 		}
 		//saveImageToRepo(distroDirPath, artifactName, releasedVersion)
 		sshagent (credentials: ['git-repo-ssh-access']) {
-		dir (distroDirPath) {
-			sh """
-				mv ${artifactName}-${releasedVersion}.jar ${artifactName}.jar
-				git add ${artifactName}.jar
-				git commit -m "Jenkins Job:${JOB_NAME} pushing jar file with released Version:${artifactName}-${releasedVersion}"
-				git push origin HEAD:master
-			"""
+			dir (distroDirPath) {
+				sh """
+					mv ${artifactName}-${releasedVersion}.jar ${artifactName}.jar
+					git add ${artifactName}.jar
+					git commit -m "Jenkins Job:${JOB_NAME} pushing jar file with released Version:${artifactName}-${releasedVersion}"
+					git push origin HEAD:master
+				"""
+			}
 		}
-	}
 	}	
 }
 
