@@ -127,7 +127,17 @@ def saveCommmonArtifact(applicationDir, distroDirPath, artifactName, releasedVer
 		dir (applicationDir) {
 			sh "cp -rf target/${artifactName}-${releasedVersion}.jar ${distroDirPath}"
 		}
-		saveImageToRepo(distroDirPath, artifactName, releasedVersion)
+		//saveImageToRepo(distroDirPath, artifactName, releasedVersion)
+		sshagent (credentials: ['git-repo-ssh-access']) {
+		dir (distroDirPath) {
+			sh """
+				mv ${artifactName}-${releasedVersion}.jar ${artifactName}.jar
+				git ${artifactName}.jar
+				git commit -m "Jenkins Job:${JOB_NAME} pushing jar file with released Version:${artifactName}-${releasedVersion}"
+				git push origin HEAD:master
+			"""
+		}
+	}
 	}	
 }
 
@@ -180,7 +190,7 @@ def saveImageToRepo(distroDirPath, artifactName, releasedVersion) {
 		dir (distroDirPath) {
 			sh """
 				git add ${artifactName}.tar
-				git commit -m "Jenkins Job:${JOB_NAME} pushing jar/tar file with released Version:${artifactName}-${releasedVersion}"
+				git commit -m "Jenkins Job:${JOB_NAME} pushing tar file with released Version:${artifactName}-${releasedVersion}"
 				git push origin HEAD:master
 			"""
 		}
