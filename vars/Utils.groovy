@@ -74,6 +74,16 @@ def sourceCodeCheckout(applicationDir, branchName, repoUrl, distroDirPath, distr
 	}
 }
 
+def sourceCodeCheckout(applicationDir, branchName, repoUrl) {
+	deleteDir()
+	echo "Checkout in progress..."
+	dir(applicationDir) {
+		git branch: "${branchName}",
+		credentialsId: 'git-repo-ssh-access',
+		url: "${repoUrl}"
+	}
+}
+
 /*
  * Responsible to remove "dangling images" and application "snapshot" images (if exists).
  *
