@@ -1,13 +1,3 @@
-def commonAppCheckout(applicationDir, commonRepoUrl, branchName) {
-	deleteDir()
-	echo "Checkout in progress..."
-	dir(applicationDir) {
-		git branch: "${branchName}",
-		credentialsId: 'git-repo-ssh-access',
-		url: "${commonRepoUrl}"
-	}
-}
-
 // Using in Common Application Jenkins file
 def getReleasedVersion(applicationDir) {
 	def matcher = readFile("${applicationDir}/pom.xml") =~ '<version>(.+?)</version>'
@@ -18,6 +8,14 @@ def getReleasedVersion(applicationDir) {
 def getArtifact(applicationDir) {
 	def matcher = readFile("${applicationDir}/pom.xml") =~ '<artifactId>(.+?)</artifactId>'
 	matcher ? matcher[0][1] : null
+}
+
+def sonarScanner(applicationDir, releasedVersion){
+	//********* Configure a webhook in your SonarQube server pointing to <your Jenkins instance>/sonarqube-webhook/ ********
+	dir(applicationDir) {
+			withSonarQubeEnv('SonarQube_V7') { // SonarQube taskId is automatically attached to the pipeline context
+				sh "mvn org.sonarsource.scanner.maven:sonar-maven-plugin:3.3.0.603:sonar -Drevision=${releasedVersion}" }
+		}
 }
 
 def processQualityGate() {
@@ -34,6 +32,13 @@ def processQualityGate() {
 	}
 }
 
+def processCodeCoverage(applicationDir, releasedVersion) {
+	dir(applicationDir) {
+			sh  "mvn cobertura:cobertura -Dcobertura.report.format=xml -Drevision=${releasedVersion}"
+			cobertura autoUpdateHealth: false, autoUpdateStability: false, coberturaReportFile: '**/target/site/cobertura/*.xml',
+			failNoReports: false, failUnhealthy: false, failUnstable: false,  maxNumberOfBuilds: 0,
+			onlyStable: false, sourceEncoding: 'ASCII', zoomCoverageChart: false}
+}
 def tagBranch(applicationDir, repoUrl, taggedVersion) {
 	sshagent (credentials: ['git-repo-ssh-access']) {
 		dir (applicationDir) {
@@ -46,33 +51,6 @@ def tagBranch(applicationDir, repoUrl, taggedVersion) {
 	}
 }
 
-def sourceCodeCheckout(applicationDir, branchName, repoUrl, distroDirPath, distroRepoUrl) {
-	deleteDir()
-	echo "Checkout in progress..."
-	dir(applicationDir) {
-		git branch: "${branchName}",
-		credentialsId: 'git-repo-ssh-access',
-		url: "${repoUrl}"
-	}
-
-	// Check for directory
-	if(!fileExists(distroDirPath))
-	{
-		echo "${distroDirPath} doesn't exist.Continue cloning ..."
-
-		dir(distroDirPath){
-			git branch: 'master',
-			credentialsId: 'git-repo-ssh-access',
-			url: "${distroRepoUrl}"
-		}
-	}
-	else {
-		echo "${distroDirPath} is already exist.Continue updating ..."
-		sshagent (credentials: ['git-repo-ssh-access']) {
-			dir(distroDirPath) { sh "git pull origin HEAD:master" }
-		}
-	}
-}
 
 def sourceCodeCheckout(applicationDir, branchName, repoUrl) {
 	deleteDir()
@@ -239,42 +217,6 @@ def stopContainer(artifactName, serverIP) {
 	} catch(error) {
 		echo "${error}"
 	}
-}
-
-def loadImage(distroDirPath, artifactName, releasedVersion, serverIP) {
-	   // BE CAREFUL WHILE DOING THIS. IT'S GOING TO REMOVE ALL THE **PREVIOUS** TAR(UI AND API) FILES
-		// To Remove snapshot TAR Files
-		try {
-			sh "ssh centos@${serverIP} 'ls && rm *${artifactName}*.tar ' "
-		} catch(error) {
-			echo "${error}"
-		}
-	
-	//sh "scp -Cp ${distroDirPath}/${artifactName}-${releasedVersion}.tar centos@${serverIP}:/home/centos"
-	//sh "ssh centos@${serverIP} 'ls && docker load -i ${artifactName}-${releasedVersion}.tar' "
-	sh "scp -C ${distroDirPath}/${artifactName}.tar centos@${serverIP}:/home/centos"
-	sh "ssh centos@${serverIP} 'ls && docker load -i ${artifactName}.tar' "
-}
-
-def loadImageInProd(distroDirPath, artifactName, releasedVersion, serverIP) {
-	sh "scp -C ${distroDirPath}/${artifactName}-${releasedVersion}.tar centos@${serverIP}:/home/centos"
-	sh "ssh centos@${serverIP} 'ls && docker load -i ${artifactName}-${releasedVersion}.tar' "
-}
-
-def apiDockerBuild(applicationDir, artifactName, releasedVersion) {
-	dir(applicationDir) {
-		echo "Starting Docker Image Creation..."
-		sh "docker build --build-arg jar_file=target/${artifactName}-${releasedVersion}.jar -t ${artifactName}:${releasedVersion} ."
-		echo "Docker Image Creation Complted..."
-	}
-	sh "docker images"
-}
-
-
-def promoteAPIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP) {
-		sh """
-				ssh centos@${serverIP} 'docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -v /var/logs/demandplannerapi:/var/logs -d -p 8099:8090 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
-				"""
 }
 
 def promoteAPIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP, dockerRegistryIP) {
@@ -455,3 +397,78 @@ def deployUIToDev(artifactName, releasedVersion, PROP_ENV) {
 	}
 	sh "docker run -e 'APP_ENV=${PROP_ENV}' -d -p 8098:80 --name  ${artifactName} -t ${artifactName}:${releasedVersion}"
 }
+
+def commonAppCheckout(applicationDir, commonRepoUrl, branchName) {
+	deleteDir()
+	echo "Checkout in progress..."
+	dir(applicationDir) {
+		git branch: "${branchName}",
+		credentialsId: 'git-repo-ssh-access',
+		url: "${commonRepoUrl}"
+	}
+}
+
+def sourceCodeCheckout(applicationDir, branchName, repoUrl, distroDirPath, distroRepoUrl) {
+	deleteDir()
+	echo "Checkout in progress..."
+	dir(applicationDir) {
+		git branch: "${branchName}",
+		credentialsId: 'git-repo-ssh-access',
+		url: "${repoUrl}"
+	}
+
+	// Check for directory
+	if(!fileExists(distroDirPath))
+	{
+		echo "${distroDirPath} doesn't exist.Continue cloning ..."
+
+		dir(distroDirPath){
+			git branch: 'master',
+			credentialsId: 'git-repo-ssh-access',
+			url: "${distroRepoUrl}"
+		}
+	}
+	else {
+		echo "${distroDirPath} is already exist.Continue updating ..."
+		sshagent (credentials: ['git-repo-ssh-access']) {
+			dir(distroDirPath) { sh "git pull origin HEAD:master" }
+		}
+	}
+}
+
+def apiDockerBuild(applicationDir, artifactName, releasedVersion) {
+	dir(applicationDir) {
+		echo "Starting Docker Image Creation..."
+		sh "docker build --build-arg jar_file=target/${artifactName}-${releasedVersion}.jar -t ${artifactName}:${releasedVersion} ."
+		echo "Docker Image Creation Complted..."
+	}
+	sh "docker images"
+}
+
+def loadImage(distroDirPath, artifactName, releasedVersion, serverIP) {
+	   // BE CAREFUL WHILE DOING THIS. IT'S GOING TO REMOVE ALL THE **PREVIOUS** TAR(UI AND API) FILES
+		// To Remove snapshot TAR Files
+		try {
+			sh "ssh centos@${serverIP} 'ls && rm *${artifactName}*.tar ' "
+		} catch(error) {
+			echo "${error}"
+		}
+	
+	//sh "scp -Cp ${distroDirPath}/${artifactName}-${releasedVersion}.tar centos@${serverIP}:/home/centos"
+	//sh "ssh centos@${serverIP} 'ls && docker load -i ${artifactName}-${releasedVersion}.tar' "
+	sh "scp -C ${distroDirPath}/${artifactName}.tar centos@${serverIP}:/home/centos"
+	sh "ssh centos@${serverIP} 'ls && docker load -i ${artifactName}.tar' "
+}
+
+def loadImageInProd(distroDirPath, artifactName, releasedVersion, serverIP) {
+	sh "scp -C ${distroDirPath}/${artifactName}-${releasedVersion}.tar centos@${serverIP}:/home/centos"
+	sh "ssh centos@${serverIP} 'ls && docker load -i ${artifactName}-${releasedVersion}.tar' "
+}
+
+def promoteAPIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP) {
+		sh """
+				ssh centos@${serverIP} 'docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -v /var/logs/demandplannerapi:/var/logs -d -p 8099:8090 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
+				"""
+}
+
+
