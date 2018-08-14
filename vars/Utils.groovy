@@ -228,7 +228,7 @@ def promoteAPIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP, dockerReg
 /*Promote Priority Configuration */
 def promotePCAPIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP, dockerRegistryIP) {
 		sh """
-				ssh centos@${serverIP} 'docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -v /var/logs/pc/api:/var/logs -d -p 8091:8091 --name ${artifactName} -t ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
+				ssh centos@${serverIP} 'docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -v /var/logs/pcapi:/var/logs -d -p 8091:8091 --name ${artifactName} -t ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
 				"""
 }
 /* ################################  UI Utility Methods ############################### */
