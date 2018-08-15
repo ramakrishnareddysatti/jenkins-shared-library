@@ -91,7 +91,7 @@ def removeImages(artifactName) {
 	try{
 		sh """
 			docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi && 
-			docker images | grep snapshot | tr -s " " | cut -d " " -f 3 | xargs --no-run-if-empty docker rmi
+			docker images | grep snapshot | tr -s " " | cut -d " " -f 3 | xargs --no-run-if-empty docker rmi -f
 		"""
 	} catch(error) {
 		echo "${error}"
