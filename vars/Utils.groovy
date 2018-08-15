@@ -1,3 +1,4 @@
+/* ################################  API Utility Methods ############################### */
 // Using in Common Application Jenkins file
 def getReleasedVersion(applicationDir) {
 	def matcher = readFile("${applicationDir}/pom.xml") =~ '<version>(.+?)</version>'
@@ -51,7 +52,6 @@ def tagBranch(applicationDir, repoUrl, taggedVersion) {
 	}
 }
 
-
 def sourceCodeCheckout(applicationDir, branchName, repoUrl) {
 	deleteDir()
 	echo "Checkout in progress..."
@@ -98,92 +98,6 @@ def removeImages(artifactName) {
 	}
 }
 
-def saveImage(applicationDir, distroDirPath, artifactName, releasedVersion, GIT_IMAGE_PUSH) {
-		if (GIT_IMAGE_PUSH.toBoolean()) {
-			echo "Save Image to Tar Archive and pushing Tar to Git Repo"
-			saveImageToFS(applicationDir, distroDirPath, artifactName, releasedVersion)
-			saveImageToRepo(distroDirPath, artifactName, releasedVersion)
-		} else {
-			echo "Save Image to Tar Archive and Copy image to ${distroDirPath}"
-			saveImageToFS(applicationDir, distroDirPath, artifactName, releasedVersion)
-		}
-}
-
-def saveCommmonArtifact(applicationDir, distroDirPath, artifactName, releasedVersion, GIT_IMAGE_PUSH) {
-	if (GIT_IMAGE_PUSH.toBoolean()) {
-		echo "Save Common Jar to Git Repo"
-		dir (applicationDir) {
-			sh "cp -rf target/${artifactName}-${releasedVersion}.jar ${distroDirPath}"
-		}
-		//saveImageToRepo(distroDirPath, artifactName, releasedVersion)
-		sshagent (credentials: ['git-repo-ssh-access']) {
-			dir (distroDirPath) {
-				sh """
-					mv ${artifactName}-${releasedVersion}.jar ${artifactName}.jar
-					git add ${artifactName}.jar
-					git commit -m "Jenkins Job:${JOB_NAME} pushing jar file with released Version:${artifactName}-${releasedVersion}"
-					git push origin HEAD:master
-				"""
-			}
-		}
-	}	
-}
-
-
-/*
- * Save one or more images to a tar archive and copy to distro path.
- */
-def saveImageToFS(applicationDir, distroDirPath, artifactName, releasedVersion) {
-	sshagent (credentials: ['git-repo-ssh-access']) {
-		sh "docker images"
-
-		// Remove snapshot images in Jenkins box
-		dir (distroDirPath) {
-			def files = findFiles glob: '**/*snapshot*.tar'
-			boolean exists = files.length > 0
-			if(exists) {
-				sh 'ls && rm -rf *snapshot*.tar'
-			} else {
-				echo "NO snapshot IMAGES IN ${applicationDir}"	
-			}
-		}
-
-		dir (applicationDir) {
-			//docker save -o <path for generated tar file> <existing image name>
-			if (applicationDir == 'demandplannerapi') {
-				//sh "docker save -o target/${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
-				sh "docker save -o target/${artifactName}.tar ${artifactName}:${releasedVersion}"
-				echo "Copying demandplannerapi tar file to ${distroDirPath}"
-				//sh "cp -rf target/${artifactName}-${releasedVersion}.tar ${distroDirPath}"
-				sh "cp -rf target/${artifactName}.tar ${distroDirPath}"
-			} else if (applicationDir == 'demandplannerui') {
-				//sh "docker save -o ${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
-				sh "docker save -o ${artifactName}.tar ${artifactName}:${releasedVersion}"
-				echo "Copying demandplannerui tar file to ${distroDirPath}"
-				//sh "cp -rf ${artifactName}-${releasedVersion}.tar ${distroDirPath}"
-				sh "cp -rf ${artifactName}.tar ${distroDirPath}"
-			}
-		}
-	}
-}
-
-/*
- * Save one or more images to a tar archive and push to repo.
- */
-def saveImageToRepo(distroDirPath, artifactName, releasedVersion) {
-	echo "artifactName: ${artifactName}"
-	echo "releasedVersion: ${releasedVersion}"
-	
-	sshagent (credentials: ['git-repo-ssh-access']) {
-		dir (distroDirPath) {
-			sh """
-				git add ${artifactName}.tar
-				git commit -m "Jenkins Job:${JOB_NAME} pushing tar file with released Version:${artifactName}-${releasedVersion}"
-				git push origin HEAD:master
-			"""
-		}
-	}
-}
 
 def pushImage(artifactName, releasedVersion, dockerRegistryIP) {
 	
@@ -195,7 +109,6 @@ def pushImage(artifactName, releasedVersion, dockerRegistryIP) {
 		docker push ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}
 	"""
 }
-
 
 
 /*
@@ -231,6 +144,7 @@ def promotePCAPIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP, dockerR
 				ssh centos@${serverIP} 'docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -v /var/logs/pcapi:/var/logs -d -p 8091:8090 --name ${artifactName} -t ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
 				"""
 }
+
 /* ################################  UI Utility Methods ############################### */
 
 //This stage installs all of the node dependencies, performs linting and builds the code.
@@ -290,6 +204,8 @@ def promoteUIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP, dockerRegi
 			"""
 }
 
+/* ################################  COMMON (UI and API) Utility Methods ############################### */
+
 def sendEmailNotification(subjectText, bodyText) {
 	
 	//subjectText = "JENKINS Notification : Successful Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'"
@@ -305,48 +221,6 @@ def sendEmailNotification(subjectText, bodyText) {
 
 }
 
-def sendNotification(buildStatus) {
-	//def mailRecipients = 'r.satti@accenture.com, sashi.kumar.sharma@accenture.com, shresthi.garg@accenture.com, suresh.kumar.sahoo@accenture.com, s.b.jha@accenture.com';
-	def mailRecipients = 'r.satti@accenture.com, suresh.kumar.sahoo@accenture.com'
-
-	/* PRINT ALL ENVIRONMENT VARIABLES
-	 sh 'env > env.txt'
-	 for (String i : readFile('env.txt').split("\r?\n")) {
-	 println i
-	 }
-	 */
-
-	// build status of null means success
-	def buildStatusVar =  buildStatus ?: 'SUCCESS'
-	echo "buildStatusVar: ${buildStatusVar}"
-
-	if (buildStatusVar == 'SUCCESS')
-	{
-		// notify users when the build is back to normal
-		emailext(
-				subject: "JENKINS Notification : Successful Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
-				//  Generates beautiful email format. Since I didn't write the contents of "groovy-html.template", I am afraid to use
-				//body: '''${SCRIPT, template="groovy-html.template"}''',
-				body: """ <p>Successful: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]':</p><p>Check console output at "<a href="${env.BUILD_URL}">${env.JOB_NAME} [${env.BUILD_NUMBER}]</a>"</p>""",
-				recipientProviders: [culprits(), developers(), requestor(), brokenTestsSuspects(), brokenBuildSuspects(), upstreamDevelopers()],
-				to: "${mailRecipients}",
-				replyTo: "${mailRecipients}"
-				)
-	}
-	else if (buildStatusVar == 'FAILURE')
-	{
-		// notify users when the Pipeline fails
-		emailext(
-				subject: "JENKINS Notification : FAILED Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
-				//  Generates beautiful email format. Since I didn't write the contents of "groovy-html.template", I am afraid to use
-				//body: '''${SCRIPT, template="groovy-html.template"}''',
-				body: """ <p>FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]':</p><p>Check console output at "<a href="${env.BUILD_URL}">${env.JOB_NAME} [${env.BUILD_NUMBER}]</a>"</p>""",
-				recipientProviders: [culprits(), developers(), requestor(), brokenTestsSuspects(), brokenBuildSuspects(), upstreamDevelopers()],
-				to: "${mailRecipients}",
-				replyTo: "${mailRecipients}"
-				)
-	}
-}
 
 /* ################################  Promotion Pipeline ############################### */
 def distroCheckout(distroDirPath, distroRepoUrl) {
@@ -477,4 +351,132 @@ def promoteAPIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP) {
 				"""
 }
 
+def saveImage(applicationDir, distroDirPath, artifactName, releasedVersion, GIT_IMAGE_PUSH) {
+		if (GIT_IMAGE_PUSH.toBoolean()) {
+			echo "Save Image to Tar Archive and pushing Tar to Git Repo"
+			saveImageToFS(applicationDir, distroDirPath, artifactName, releasedVersion)
+			saveImageToRepo(distroDirPath, artifactName, releasedVersion)
+		} else {
+			echo "Save Image to Tar Archive and Copy image to ${distroDirPath}"
+			saveImageToFS(applicationDir, distroDirPath, artifactName, releasedVersion)
+		}
+}
 
+def saveCommmonArtifact(applicationDir, distroDirPath, artifactName, releasedVersion, GIT_IMAGE_PUSH) {
+	if (GIT_IMAGE_PUSH.toBoolean()) {
+		echo "Save Common Jar to Git Repo"
+		dir (applicationDir) {
+			sh "cp -rf target/${artifactName}-${releasedVersion}.jar ${distroDirPath}"
+		}
+		//saveImageToRepo(distroDirPath, artifactName, releasedVersion)
+		sshagent (credentials: ['git-repo-ssh-access']) {
+			dir (distroDirPath) {
+				sh """
+					mv ${artifactName}-${releasedVersion}.jar ${artifactName}.jar
+					git add ${artifactName}.jar
+					git commit -m "Jenkins Job:${JOB_NAME} pushing jar file with released Version:${artifactName}-${releasedVersion}"
+					git push origin HEAD:master
+				"""
+			}
+		}
+	}	
+}
+
+
+/*
+ * Save one or more images to a tar archive and copy to distro path.
+ */
+def saveImageToFS(applicationDir, distroDirPath, artifactName, releasedVersion) {
+	sshagent (credentials: ['git-repo-ssh-access']) {
+		sh "docker images"
+
+		// Remove snapshot images in Jenkins box
+		dir (distroDirPath) {
+			def files = findFiles glob: '**/*snapshot*.tar'
+			boolean exists = files.length > 0
+			if(exists) {
+				sh 'ls && rm -rf *snapshot*.tar'
+			} else {
+				echo "NO snapshot IMAGES IN ${applicationDir}"	
+			}
+		}
+
+		dir (applicationDir) {
+			//docker save -o <path for generated tar file> <existing image name>
+			if (applicationDir == 'demandplannerapi') {
+				//sh "docker save -o target/${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
+				sh "docker save -o target/${artifactName}.tar ${artifactName}:${releasedVersion}"
+				echo "Copying demandplannerapi tar file to ${distroDirPath}"
+				//sh "cp -rf target/${artifactName}-${releasedVersion}.tar ${distroDirPath}"
+				sh "cp -rf target/${artifactName}.tar ${distroDirPath}"
+			} else if (applicationDir == 'demandplannerui') {
+				//sh "docker save -o ${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
+				sh "docker save -o ${artifactName}.tar ${artifactName}:${releasedVersion}"
+				echo "Copying demandplannerui tar file to ${distroDirPath}"
+				//sh "cp -rf ${artifactName}-${releasedVersion}.tar ${distroDirPath}"
+				sh "cp -rf ${artifactName}.tar ${distroDirPath}"
+			}
+		}
+	}
+}
+
+/*
+ * Save one or more images to a tar archive and push to repo.
+ */
+def saveImageToRepo(distroDirPath, artifactName, releasedVersion) {
+	echo "artifactName: ${artifactName}"
+	echo "releasedVersion: ${releasedVersion}"
+	
+	sshagent (credentials: ['git-repo-ssh-access']) {
+		dir (distroDirPath) {
+			sh """
+				git add ${artifactName}.tar
+				git commit -m "Jenkins Job:${JOB_NAME} pushing tar file with released Version:${artifactName}-${releasedVersion}"
+				git push origin HEAD:master
+			"""
+		}
+	}
+}
+
+def sendNotification(buildStatus) {
+	//def mailRecipients = 'r.satti@accenture.com, sashi.kumar.sharma@accenture.com, shresthi.garg@accenture.com, suresh.kumar.sahoo@accenture.com, s.b.jha@accenture.com';
+	def mailRecipients = 'r.satti@accenture.com, suresh.kumar.sahoo@accenture.com'
+
+	/* PRINT ALL ENVIRONMENT VARIABLES
+	 sh 'env > env.txt'
+	 for (String i : readFile('env.txt').split("\r?\n")) {
+	 println i
+	 }
+	 */
+
+	// build status of null means success
+	def buildStatusVar =  buildStatus ?: 'SUCCESS'
+	echo "buildStatusVar: ${buildStatusVar}"
+
+	if (buildStatusVar == 'SUCCESS')
+	{
+		// notify users when the build is back to normal
+		emailext(
+				subject: "JENKINS Notification : Successful Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
+				//  Generates beautiful email format. Since I didn't write the contents of "groovy-html.template", I am afraid to use
+				//body: '''${SCRIPT, template="groovy-html.template"}''',
+				body: """ <p>Successful: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]':</p><p>Check console output at "<a href="${env.BUILD_URL}">${env.JOB_NAME} [${env.BUILD_NUMBER}]</a>"</p>""",
+				recipientProviders: [culprits(), developers(), requestor(), brokenTestsSuspects(), brokenBuildSuspects(), upstreamDevelopers()],
+				to: "${mailRecipients}",
+				replyTo: "${mailRecipients}"
+				)
+	}
+	else if (buildStatusVar == 'FAILURE')
+	{
+		// notify users when the Pipeline fails
+		emailext(
+				subject: "JENKINS Notification : FAILED Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
+				//  Generates beautiful email format. Since I didn't write the contents of "groovy-html.template", I am afraid to use
+				//body: '''${SCRIPT, template="groovy-html.template"}''',
+				body: """ <p>FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]':</p><p>Check console output at "<a href="${env.BUILD_URL}">${env.JOB_NAME} [${env.BUILD_NUMBER}]</a>"</p>""",
+				recipientProviders: [culprits(), developers(), requestor(), brokenTestsSuspects(), brokenBuildSuspects(), upstreamDevelopers()],
+				to: "${mailRecipients}",
+				replyTo: "${mailRecipients}"
+				)
+	}
+}
