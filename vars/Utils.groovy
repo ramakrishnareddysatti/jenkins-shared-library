@@ -87,11 +87,11 @@ def removeDanglingImages(artifactName, serverIP) {
  * Responsible to remove "dangling images" and application "snapshot" images (if exists) from JENKINS BOX.
  */ 
 def removeImages(artifactName) {
-
+	// docker images | grep snapshot | tr -s " " | cut -d " " -f 3 | xargs --no-run-if-empty docker rmi -f
 	try{
 		sh """
 			docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi && 
-			docker images | grep snapshot | tr -s " " | cut -d " " -f 3 | xargs --no-run-if-empty docker rmi -f
+			docker images | grep ${artifactName} | tr -s " " | cut -d " " -f 3 | xargs --no-run-if-empty docker rmi -f
 		"""
 	} catch(error) {
 		echo "${error}"
