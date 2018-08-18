@@ -75,7 +75,7 @@ def removeDanglingImages(artifactName, serverIP) {
 			"""
 		*/
 		sh """
-			ssh centos@${serverIP} 'docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi && 
+			ssh -v centos@${serverIP} 'docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi && 
 			docker images | grep artifactName | tr -s " " | cut -d " " -f 3 | xargs --no-run-if-empty docker rmi' 
 			"""	
 	} catch(error) {
@@ -124,7 +124,7 @@ def stopContainer(artifactName, serverIP) {
 		*/
 
 		sh """
-			ssh centos@${serverIP} 'docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker stop {} &&
+			ssh -v centos@${serverIP} 'docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker stop {} &&
 			docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker rm {}' 
 			"""	
 	} catch(error) {
@@ -134,14 +134,14 @@ def stopContainer(artifactName, serverIP) {
 
 def promoteAPIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP, dockerRegistryIP) {
 		sh """
-				ssh centos@${serverIP} 'docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -v /var/logs:/var/logs -d -p 8099:8090 --name ${artifactName} -t ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
+				ssh -v centos@${serverIP} 'docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -v /var/logs:/var/logs -d -p 8099:8090 --name ${artifactName} -t ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
 				"""
 }
 
 /*Promote Priority Configuration */
 def promotePCAPIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP, dockerRegistryIP) {
 		sh """
-				ssh centos@${serverIP} 'docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -v /var/logs:/var/logs -d -p 8091:8090 --name ${artifactName} -t ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
+				ssh -v centos@${serverIP} 'docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -v /var/logs:/var/logs -d -p 8091:8090 --name ${artifactName} -t ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
 				"""
 }
 
@@ -194,13 +194,13 @@ def uiDockerBuild(applicationDir, artifactName, releasedVersion) {
 
 def promoteUIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP) {
 		sh """
-				ssh centos@${serverIP} 'docker run -e \'APP_ENV=${PROP_ENV}\' -d -p 8098:80 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
+				ssh -v centos@${serverIP} 'docker run -e \'APP_ENV=${PROP_ENV}\' -d -p 8098:80 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
 			"""
 }
 
 def promoteUIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP, dockerRegistryIP) {
 		sh """
-				ssh centos@${serverIP} 'docker run -e \'APP_ENV=${PROP_ENV}\' -d -p 8098:80 --name ${artifactName} -t ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
+				ssh -v centos@${serverIP} 'docker run -e \'APP_ENV=${PROP_ENV}\' -d -p 8098:80 --name ${artifactName} -t ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
 			"""
 }
 
