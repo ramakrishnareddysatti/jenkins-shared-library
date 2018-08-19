@@ -5,7 +5,7 @@ def getReleasedVersion(applicationDir) {
 	matcher ? matcher[0][1] : null
 }
 
-// Using in DP API Application Jenkins file
+// Using in DP and PC API Application Jenkins file
 def getArtifact(applicationDir) {
 	def matcher = readFile("${applicationDir}/pom.xml") =~ '<artifactId>(.+?)</artifactId>'
 	matcher ? matcher[0][1] : null
@@ -75,8 +75,8 @@ def removeDanglingImages(artifactName, serverIP) {
 			"""
 		*/
 		sh """
-			ssh -v centos@${serverIP} 'docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi && 
-			docker images | grep artifactName | tr -s " " | cut -d " " -f 3 | xargs --no-run-if-empty docker rmi' 
+			ssh centos@${serverIP} 'docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi && 
+			docker images | grep ${artifactName} | tr -s " " | cut -d " " -f 3 | xargs --no-run-if-empty docker rmi' 
 			"""	
 	} catch(error) {
 		echo "${error}"
@@ -207,7 +207,6 @@ def promoteUIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP, dockerRegi
 /* ################################  COMMON (UI and API) Utility Methods ############################### */
 
 def sendEmailNotification(subjectText, bodyText) {
-	
 	//subjectText = "JENKINS Notification : Successful Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'"
 	//bodyText = """ <p>Successful: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]':</p><p>Check console output at "<a href="${env.BUILD_URL}">${env.JOB_NAME} [${env.BUILD_NUMBER}]</a>"</p>"""
 	def mailRecipients = 'r.satti@accenture.com, suresh.kumar.sahoo@accenture.com'
@@ -319,6 +318,7 @@ def sourceCodeCheckout(applicationDir, branchName, repoUrl, distroDirPath, distr
 def apiDockerBuild(applicationDir, artifactName, releasedVersion) {
 	dir(applicationDir) {
 		echo "Starting Docker Image Creation..."
+		// Build argument 'jar_file' defined in demandplannerapi Dockerfile.
 		sh "docker build --build-arg jar_file=target/${artifactName}-${releasedVersion}.jar -t ${artifactName}:${releasedVersion} ."
 		echo "Docker Image Creation Complted..."
 	}
