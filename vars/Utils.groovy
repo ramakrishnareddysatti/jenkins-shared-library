@@ -75,7 +75,7 @@ def removeDanglingImages(artifactName, serverIP) {
 			"""
 		*/
 		sh """
-			ssh centos@${serverIP} 'docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi && 
+			ssh -i  ~/.ssh/id_rsa -v centos@${serverIP} 'docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi && 
 			docker images | grep ${artifactName} | tr -s " " | cut -d " " -f 3 | xargs --no-run-if-empty docker rmi' 
 			"""	
 	} catch(error) {
@@ -124,7 +124,7 @@ def stopContainer(artifactName, serverIP) {
 		*/
 
 		sh """
-			ssh centos@${serverIP} 'docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker stop {} &&
+			ssh -i  ~/.ssh/id_rsa -v centos@${serverIP} 'docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker stop {} &&
 			docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker rm {}' 
 			"""	
 	} catch(error) {
@@ -134,15 +134,17 @@ def stopContainer(artifactName, serverIP) {
 
 /*Demand Planner API Configuration */
 def promoteAPIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP, dockerRegistryIP) {
+		/* 	Container Expose port: 8090 configured as tomcat port in DP applictation properties.		*/
 		sh """
-				ssh centos@${serverIP} 'docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -v /var/logs:/var/logs -d -p 8099:8090 --name ${artifactName} -t ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
+				ssh -i  ~/.ssh/id_rsa -v centos@${serverIP} 'docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -v /var/logs:/var/logs -d -p 8099:8090 --name ${artifactName} -t ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
 				"""
 }
 
 /*Promote Priority Configuration */
 def promotePCAPIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP, dockerRegistryIP) {
+		/* Container Expose port: 8091 configured as tomcat port in PC applictation properties. 	*/
 		sh """
-				ssh -v centos@${serverIP} 'docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -v /var/logs:/var/logs -d -p 8091:8091 --name ${artifactName} -t ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
+				ssh -i  ~/.ssh/id_rsa -v centos@${serverIP} 'docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -v /var/logs:/var/logs -d -p 8091:8091 --name ${artifactName} -t ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
 				"""
 }
 
@@ -165,7 +167,7 @@ def npmBuild(applicationDir, branchName, repoUrl) {
 	}
 }
 
-def uiCodeQualityAnalysis(applicationDir) {
+def uiCodeQualityAnalysis(applicationDir, releaseVersion) {
 	//********* Configure a webhook in your SonarQube server pointing to <your Jenkins instance>/sonarqube-webhook/ ********
 	def sonarqubeScannerHome = tool 'SonarQubeScanner_V3'
 	dir(applicationDir) {
@@ -179,7 +181,9 @@ def uiCodeQualityAnalysis(applicationDir) {
 					" -Dsonar.test.inclusions=**/*.spec.ts" +
 					" -Dsonar.ts.tslintconfigpath=tslint.json" +
 					" -Dsonar.ts.lcov.reportpath=test-results/coverage/coverage.lcov" +
-					" -Dsonar.sourceEncoding=UTF-8"
+					" -Dsonar.sourceEncoding=UTF-8" + 
+					" -Dsonar.version=${releaseVersion}"  
+
 		}
 	}
 }
@@ -195,13 +199,13 @@ def uiDockerBuild(applicationDir, artifactName, releasedVersion) {
 
 def promoteUIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP) {
 		sh """
-				ssh centos@${serverIP} 'docker run -e \'APP_ENV=${PROP_ENV}\' -d -p 8098:80 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
+				ssh -i  ~/.ssh/id_rsa -v centos@${serverIP} 'docker run -e \'APP_ENV=${PROP_ENV}\' -d -p 8098:80 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
 			"""
 }
 
 def promoteUIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP, dockerRegistryIP) {
 		sh """
-				ssh centos@${serverIP} 'docker run -e \'APP_ENV=${PROP_ENV}\' -d -p 8098:80 --name ${artifactName} -t ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
+				ssh -i  ~/.ssh/id_rsa -v centos@${serverIP} 'docker run -e \'APP_ENV=${PROP_ENV}\' -d -p 8098:80 --name ${artifactName} -t ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
 			"""
 }
 
@@ -330,7 +334,7 @@ def loadImage(distroDirPath, artifactName, releasedVersion, serverIP) {
 	   // BE CAREFUL WHILE DOING THIS. IT'S GOING TO REMOVE ALL THE **PREVIOUS** TAR(UI AND API) FILES
 		// To Remove snapshot TAR Files
 		try {
-			sh "ssh centos@${serverIP} 'ls && rm *${artifactName}*.tar ' "
+			sh "ssh -i  ~/.ssh/id_rsa -v centos@${serverIP} 'ls && rm *${artifactName}*.tar ' "
 		} catch(error) {
 			echo "${error}"
 		}
@@ -338,17 +342,17 @@ def loadImage(distroDirPath, artifactName, releasedVersion, serverIP) {
 	//sh "scp -Cp ${distroDirPath}/${artifactName}-${releasedVersion}.tar centos@${serverIP}:/home/centos"
 	//sh "ssh centos@${serverIP} 'ls && docker load -i ${artifactName}-${releasedVersion}.tar' "
 	sh "scp -C ${distroDirPath}/${artifactName}.tar centos@${serverIP}:/home/centos"
-	sh "ssh centos@${serverIP} 'ls && docker load -i ${artifactName}.tar' "
+	sh "ssh -i  ~/.ssh/id_rsa -v centos@${serverIP} 'ls && docker load -i ${artifactName}.tar' "
 }
 
 def loadImageInProd(distroDirPath, artifactName, releasedVersion, serverIP) {
 	sh "scp -C ${distroDirPath}/${artifactName}-${releasedVersion}.tar centos@${serverIP}:/home/centos"
-	sh "ssh centos@${serverIP} 'ls && docker load -i ${artifactName}-${releasedVersion}.tar' "
+	sh "ssh -i  ~/.ssh/id_rsa -v centos@${serverIP} 'ls && docker load -i ${artifactName}-${releasedVersion}.tar' "
 }
 
 def promoteAPIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP) {
 		sh """
-				ssh centos@${serverIP} 'docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -v /var/logs/demandplannerapi:/var/logs -d -p 8099:8090 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
+				ssh -i  ~/.ssh/id_rsa -v centos@${serverIP} 'docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -v /var/logs/demandplannerapi:/var/logs -d -p 8099:8090 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
 				"""
 }
 
