@@ -175,6 +175,7 @@ def uiCodeQualityAnalysis(applicationDir, releaseVersion) {
 			sh 'ls -la'
 			sh "${sonarqubeScannerHome}/bin/sonar-scanner" +
 					" -Dsonar.projectKey=demandplannerui" +
+					" -Dsonar.projectName=demandplannerui" +
 					" -Dsonar.sources=src" +
 					" -Dsonar.exclusions=**/node_modules/**,**/*.spec.ts" +
 					" -Dsonar.tests=src" +
@@ -182,7 +183,7 @@ def uiCodeQualityAnalysis(applicationDir, releaseVersion) {
 					" -Dsonar.ts.tslintconfigpath=tslint.json" +
 					" -Dsonar.ts.lcov.reportpath=test-results/coverage/coverage.lcov" +
 					" -Dsonar.sourceEncoding=UTF-8" + 
-					" -Dsonar.version=${releaseVersion}"  
+					" -Dsonar.projectVersion=${releaseVersion}"  
 
 		}
 	}
