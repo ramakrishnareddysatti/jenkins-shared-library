@@ -205,7 +205,7 @@ def promoteUIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP) {
 
 def promoteUIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP, dockerRegistryIP) {
 		sh """
-				ssh -i  ~/.ssh/id_rsa -v centos@${serverIP} 'docker run -e \'APP_ENV=${PROP_ENV}\' -v /var/logs/ngdpui:/var/log/nginx -d -p 8098:80 --name ${artifactName} -t ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
+				ssh -i  ~/.ssh/id_rsa -v centos@${serverIP} 'docker run -e \'APP_ENV=${PROP_ENV}\' -v /var/logs/dpui:/var/log/nginx -d -p 8098:80 --name ${artifactName} -t ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
 			"""
 }
 
