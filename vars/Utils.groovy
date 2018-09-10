@@ -184,7 +184,6 @@ def uiCodeQualityAnalysis(applicationDir, releaseVersion) {
 					" -Dsonar.ts.lcov.reportpath=test-results/coverage/coverage.lcov" +
 					" -Dsonar.sourceEncoding=UTF-8" + 
 					" -Dsonar.projectVersion=${releaseVersion}"  
-
 		}
 	}
 }
@@ -200,13 +199,13 @@ def uiDockerBuild(applicationDir, artifactName, releasedVersion) {
 
 def promoteUIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP) {
 		sh """
-				ssh -i  ~/.ssh/id_rsa -v centos@${serverIP} 'docker run -e \'APP_ENV=${PROP_ENV}\' -d -p 8098:80 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
+				ssh -i  ~/.ssh/id_rsa -v centos@${serverIP} 'docker run -e \'APP_ENV=${PROP_ENV}\' -v /var/logs/dpui:/var/log/nginx -d -p 8098:80 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
 			"""
 }
 
 def promoteUIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP, dockerRegistryIP) {
 		sh """
-				ssh -i  ~/.ssh/id_rsa -v centos@${serverIP} 'docker run -e \'APP_ENV=${PROP_ENV}\' -d -p 8098:80 --name ${artifactName} -t ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
+				ssh -i  ~/.ssh/id_rsa -v centos@${serverIP} 'docker run -e \'APP_ENV=${PROP_ENV}\' -v /var/logs/ngdpui:/var/log/nginx -d -p 8098:80 --name ${artifactName} -t ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
 			"""
 }
 
