@@ -134,17 +134,19 @@ def stopContainer(artifactName, serverIP) {
 
 /*Demand Planner API Configuration */
 def promoteAPIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP, dockerRegistryIP) {
+	//-t ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}
 		/* 	Container Expose port: 8090 configured as tomcat port in DP applictation properties.		*/
 		sh """
-				ssh -i  ~/.ssh/id_rsa -v centos@${serverIP} 'docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -v /var/logs:/var/logs -d -p 8099:8090 --name ${artifactName} -t ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
+				ssh -i  ~/.ssh/id_rsa -v centos@${serverIP} 'docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -v /var/logs:/var/logs -d -p 8099:8090 --name ${artifactName} ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
 				"""
 }
 
 /*Promote Priority Configuration */
 def promotePCAPIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP, dockerRegistryIP) {
+	//-t ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}
 		/* Container Expose port: 8091 configured as tomcat port in PC applictation properties. 	*/
 		sh """
-				ssh -i  ~/.ssh/id_rsa -v centos@${serverIP} 'docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -v /var/logs:/var/logs -d -p 8091:8091 --name ${artifactName} -t ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
+				ssh -i  ~/.ssh/id_rsa -v centos@${serverIP} 'docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -v /var/logs:/var/logs -d -p 8091:8091 --name ${artifactName} ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
 				"""
 }
 
@@ -198,14 +200,16 @@ def uiDockerBuild(applicationDir, artifactName, releasedVersion) {
 }
 
 def promoteUIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP) {
+	//-t ${artifactName}:${releasedVersion}
 		sh """
-				ssh -i  ~/.ssh/id_rsa -v centos@${serverIP} 'docker run -e \'APP_ENV=${PROP_ENV}\' -v /var/logs/dpui:/var/log/nginx -d -p 8098:80 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
+				ssh -i  ~/.ssh/id_rsa -v centos@${serverIP} 'docker run -e \'APP_ENV=${PROP_ENV}\' -v /var/logs/dpui:/var/log/nginx -d -p 8098:80 --name ${artifactName} ${artifactName}:${releasedVersion}'
 			"""
 }
 
 def promoteUIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP, dockerRegistryIP) {
+	// -t ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}
 		sh """
-				ssh -i  ~/.ssh/id_rsa -v centos@${serverIP} 'docker run -e \'APP_ENV=${PROP_ENV}\' -v /var/logs/dpui:/var/log/nginx -d -p 8098:80 --name ${artifactName} -t ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
+				ssh -i  ~/.ssh/id_rsa -v centos@${serverIP} 'docker run -e \'APP_ENV=${PROP_ENV}\' -v /var/logs/dpui:/var/log/nginx -d -p 8098:80 --name ${artifactName} ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
 			"""
 }
 
@@ -352,7 +356,7 @@ def loadImageInProd(distroDirPath, artifactName, releasedVersion, serverIP) {
 
 def promoteAPIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP) {
 		sh """
-				ssh -i  ~/.ssh/id_rsa -v centos@${serverIP} 'docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -v /var/logs/demandplannerapi:/var/logs -d -p 8099:8090 --name ${artifactName} -t ${artifactName}:${releasedVersion}'
+				ssh -i  ~/.ssh/id_rsa -v centos@${serverIP} 'docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -v /var/logs/demandplannerapi:/var/logs -d -p 8099:8090 --name ${artifactName} ${artifactName}:${releasedVersion}'
 				"""
 }
 
@@ -445,7 +449,7 @@ def saveImageToRepo(distroDirPath, artifactName, releasedVersion) {
 
 def sendNotification(buildStatus) {
 	//def mailRecipients = 'r.satti@accenture.com, sashi.kumar.sharma@accenture.com, shresthi.garg@accenture.com, suresh.kumar.sahoo@accenture.com, s.b.jha@accenture.com';
-	def mailRecipients = 'r.satti@accenture.com, suresh.kumar.sahoo@accenture.com'
+	def mailRecipients = 'r.satti@accenture.com'
 
 	/* PRINT ALL ENVIRONMENT VARIABLES
 	 sh 'env > env.txt'
