@@ -137,7 +137,7 @@ def promoteAPIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP, dockerReg
 	//-t ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}
 		/* 	Container Expose port: 8090 configured as tomcat port in DP applictation properties.		*/
 		sh """
-				ssh -i  ~/.ssh/id_rsa -v centos@${serverIP} 'docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -v /var/logs:/var/logs -d -p 8099:8090 --name ${artifactName} ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
+				ssh -i  ~/.ssh/id_rsa -v centos@${serverIP} 'docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -v /local/mnt:/local/mnt -d -p 8099:8090 --name ${artifactName} ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
 				"""
 }
 
@@ -146,7 +146,7 @@ def promotePCAPIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP, dockerR
 	//-t ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}
 		/* Container Expose port: 8091 configured as tomcat port in PC applictation properties. 	*/
 		sh """
-				ssh -i  ~/.ssh/id_rsa -v centos@${serverIP} 'docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -v /var/logs:/var/logs -d -p 8091:8091 --name ${artifactName} ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
+				ssh -i  ~/.ssh/id_rsa -v centos@${serverIP} 'docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -v /local/mnt:/local/mnt -d -p 8091:8091 --name ${artifactName} ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
 				"""
 }
 
