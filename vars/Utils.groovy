@@ -74,8 +74,9 @@ def removeDanglingImages(artifactName, serverIP) {
 			docker images | grep snapshot | tr -s " " | cut -d " " -f 3 | xargs --no-run-if-empty docker rmi' 
 			"""
 		*/
+		// For troubel shooting: ssh -i  ~/.ssh/id_rsa -v
 		sh """
-			ssh -i  ~/.ssh/id_rsa -v centos@${serverIP} 'docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi && 
+			ssh -i  ~/.ssh/id_rsa centos@${serverIP} 'docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi && 
 			docker images | grep ${artifactName} | tr -s " " | cut -d " " -f 3 | xargs --no-run-if-empty docker rmi' 
 			"""	
 	} catch(error) {
@@ -122,9 +123,9 @@ def stopContainer(artifactName, serverIP) {
 			docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker rm {}' 
 			"""
 		*/
-
+		// For troubel shooting: ssh -i  ~/.ssh/id_rsa -v
 		sh """
-			ssh -i  ~/.ssh/id_rsa -v centos@${serverIP} 'docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker stop {} &&
+			ssh -i  ~/.ssh/id_rsa centos@${serverIP} 'docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker stop {} &&
 			docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker rm {}' 
 			"""	
 	} catch(error) {
@@ -136,8 +137,9 @@ def stopContainer(artifactName, serverIP) {
 def promoteAPIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP, dockerRegistryIP) {
 	//-t ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}
 		/* 	Container Expose port: 8090 configured as tomcat port in DP applictation properties.		*/
+		// For troubel shooting: ssh -i  ~/.ssh/id_rsa -v
 		sh """
-				ssh -i  ~/.ssh/id_rsa -v centos@${serverIP} 'docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -v /local/mnt:/local/mnt -d -p 8099:8090 --name ${artifactName} ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
+				ssh -i  ~/.ssh/id_rsa centos@${serverIP} 'docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -v /local/mnt:/local/mnt -d -p 8099:8090 --name ${artifactName} ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
 				"""
 }
 
@@ -145,8 +147,9 @@ def promoteAPIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP, dockerReg
 def promotePCAPIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP, dockerRegistryIP) {
 	//-t ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}
 		/* Container Expose port: 8091 configured as tomcat port in PC applictation properties. 	*/
+		// For troubel shooting: ssh -i  ~/.ssh/id_rsa -v
 		sh """
-				ssh -i  ~/.ssh/id_rsa -v centos@${serverIP} 'docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -v /local/mnt:/local/mnt -d -p 8091:8091 --name ${artifactName} ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
+				ssh -i  ~/.ssh/id_rsa centos@${serverIP} 'docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -v /local/mnt:/local/mnt -d -p 8091:8091 --name ${artifactName} ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
 				"""
 }
 
@@ -201,15 +204,17 @@ def uiDockerBuild(applicationDir, artifactName, releasedVersion) {
 
 def promoteUIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP) {
 	//-t ${artifactName}:${releasedVersion}
+	// For troubel shooting: ssh -i  ~/.ssh/id_rsa -v
 		sh """
-				ssh -i  ~/.ssh/id_rsa -v centos@${serverIP} 'docker run -e \'APP_ENV=${PROP_ENV}\' -v /var/logs/dpui:/var/log/nginx -d -p 8098:80 --name ${artifactName} ${artifactName}:${releasedVersion}'
+				ssh -i  ~/.ssh/id_rsa centos@${serverIP} 'docker run -e \'APP_ENV=${PROP_ENV}\' -v /var/logs/dpui:/var/log/nginx -d -p 8098:80 --name ${artifactName} ${artifactName}:${releasedVersion}'
 			"""
 }
 
 def promoteUIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP, dockerRegistryIP) {
 	// -t ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}
+	// For troubel shooting: ssh -i  ~/.ssh/id_rsa -v
 		sh """
-				ssh -i  ~/.ssh/id_rsa -v centos@${serverIP} 'docker run -e \'APP_ENV=${PROP_ENV}\' -v /var/logs/dpui:/var/log/nginx -d -p 8098:80 --name ${artifactName} ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
+				ssh -i  ~/.ssh/id_rsa centos@${serverIP} 'docker run -e \'APP_ENV=${PROP_ENV}\' -v /var/logs/dpui:/var/log/nginx -d -p 8098:80 --name ${artifactName} ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
 			"""
 }
 
