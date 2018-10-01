@@ -153,6 +153,11 @@ def promotePCAPIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP, dockerR
 				"""
 }
 
+def pullDockerImage(artifactName, releasedVersion, serverIP, dockerRegistryIP) {
+		sh """
+				ssh -i  ~/.ssh/id_rsa centos@${serverIP} 'docker pull ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
+				"""
+}
 /* ################################  UI Utility Methods ############################### */
 
 //This stage installs all of the node dependencies, performs linting and builds the code.
