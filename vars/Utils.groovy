@@ -211,7 +211,7 @@ def promoteUIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP) {
 	//-t ${artifactName}:${releasedVersion}
 	// For troubel shooting: ssh -i  ~/.ssh/id_rsa -v
 		sh """
-				ssh -i  ~/.ssh/id_rsa centos@${serverIP} 'docker run -e \'APP_ENV=${PROP_ENV}\' -v /var/logs/dpui:/var/log/nginx -d -p 8098:80 --name ${artifactName} ${artifactName}:${releasedVersion}'
+				ssh -i  ~/.ssh/id_rsa centos@${serverIP} 'docker run -e \'APP_ENV=${PROP_ENV}\' -v /local/mnt/dpui:/var/log/nginx -d -p 8098:80 --name ${artifactName} ${artifactName}:${releasedVersion}'
 			"""
 }
 
@@ -219,7 +219,7 @@ def promoteUIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP, dockerRegi
 	// -t ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}
 	// For troubel shooting: ssh -i  ~/.ssh/id_rsa -v
 		sh """
-				ssh -i  ~/.ssh/id_rsa centos@${serverIP} 'docker run -e \'APP_ENV=${PROP_ENV}\' -v /var/logs/dpui:/var/log/nginx -d -p 8098:80 --name ${artifactName} ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
+				ssh -i  ~/.ssh/id_rsa centos@${serverIP} 'docker run -e \'APP_ENV=${PROP_ENV}\' -v /local/mnt/dpui:/var/log/nginx -d -p 8098:80 --name ${artifactName} ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
 			"""
 }
 
