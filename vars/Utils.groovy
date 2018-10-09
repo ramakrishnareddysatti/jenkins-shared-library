@@ -158,6 +158,16 @@ def npmBuild(applicationDir, branchName, repoUrl) {
 	}
 }
 
+def apiDockerBuild(applicationDir, artifactName, releasedVersion) {
+	dir(applicationDir) {
+		echo "Starting Docker Image Creation..."
+		// Build argument 'jar_file' defined in demandplannerapi Dockerfile.
+		sh "docker build --build-arg jar_file=target/${artifactName}-${releasedVersion}.jar -t ${artifactName}:${releasedVersion} ."
+		echo "Docker Image Creation Complted..."
+	}
+	sh "docker images"
+}
+
 def uiCodeQualityAnalysis(applicationDir, releaseVersion) {
 	//********* Configure a webhook in your SonarQube server pointing to <your Jenkins instance>/sonarqube-webhook/ ********
 	def sonarqubeScannerHome = tool 'SonarQubeScanner_V3'
