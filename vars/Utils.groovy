@@ -41,7 +41,7 @@ def processCodeCoverage(applicationDir, releasedVersion) {
 			onlyStable: false, sourceEncoding: 'ASCII', zoomCoverageChart: false}
 }
 def tagBranch(applicationDir, repoUrl, taggedVersion) {
-	sshagent (credentials: ['git-repo-ssh-access']) {
+	sshagent (credentials: ['global-shared-library']) {
 		dir (applicationDir) {
 			sh "ls -l"
 			sh "git remote set-url origin ${repoUrl}"
@@ -57,7 +57,7 @@ def sourceCodeCheckout(applicationDir, branchName, repoUrl) {
 	echo "Checkout in progress..."
 	dir(applicationDir) {
 		git branch: "${branchName}",
-		credentialsId: 'git-repo-ssh-access',
+		credentialsId: 'global-shared-library',
 		url: "${repoUrl}"
 	}
 }
@@ -66,17 +66,10 @@ def sourceCodeCheckout(applicationDir, branchName, repoUrl) {
  * Responsible to remove "dangling images" and application "snapshot" images (if exists).
  *
  */
-def removeDanglingImages(artifactName, serverIP) {
+def removeDanglingImages(artifactName, serverIP, serviceAccount) {
 	try{
-		/*
 		sh """
-			ssh centos@${serverIP} 'sudo su && docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi && 
-			docker images | grep snapshot | tr -s " " | cut -d " " -f 3 | xargs --no-run-if-empty docker rmi' 
-			"""
-		*/
-		// For troubel shooting: ssh -i  ~/.ssh/id_rsa -v
-		sh """
-			ssh -i  ~/.ssh/id_rsa centos@${serverIP} 'docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi && 
+			ssh -i  ~/.ssh/id_rsa ${serviceAccount}@${serverIP} 'docker images --no-trunc -aqf dangling=true | xargs --no-run-if-empty docker rmi && 
 			docker images | grep ${artifactName} | tr -s " " | cut -d " " -f 3 | xargs --no-run-if-empty docker rmi' 
 			"""	
 	} catch(error) {
@@ -115,17 +108,11 @@ def pushImage(artifactName, releasedVersion, dockerRegistryIP) {
 /*
  * Stop and Remove Container (if exists)
  */
-def stopContainer(artifactName, serverIP) {
+def stopContainer(artifactName, serverIP, serviceAccount) {
 	try{
-		/*
+	
 		sh """
-			ssh centos@${serverIP} 'sudo su && docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker stop {} &&
-			docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker rm {}' 
-			"""
-		*/
-		// For troubel shooting: ssh -i  ~/.ssh/id_rsa -v
-		sh """
-			ssh -i  ~/.ssh/id_rsa centos@${serverIP} 'docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker stop {} &&
+			ssh -i  ~/.ssh/id_rsa ${serviceAccount}@${serverIP} 'docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker stop {} &&
 			docker ps --no-trunc -aqf \'name=${artifactName}\' | xargs -I {} docker rm {}' 
 			"""	
 	} catch(error) {
@@ -134,28 +121,22 @@ def stopContainer(artifactName, serverIP) {
 }
 
 /*Demand Planner API Configuration */
-def promoteAPIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP, dockerRegistryIP) {
-	//-t ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}
-		/* 	Container Expose port: 8090 configured as tomcat port in DP applictation properties.		*/
-		// For troubel shooting: ssh -i  ~/.ssh/id_rsa -v
+def promoteDPAPIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP, dockerRegistryIP, serviceAccount) {
 		sh """
-				ssh -i  ~/.ssh/id_rsa centos@${serverIP} 'docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -v /local/mnt:/local/mnt -d -p 8099:8090 --name ${artifactName} ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
+				ssh -i  ~/.ssh/id_rsa ${serviceAccount}@${serverIP} 'docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -v /local/mnt:/local/mnt -d -p 8099:8090 --name ${artifactName} ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
 				"""
 }
 
 /*Promote Priority Configuration */
-def promotePCAPIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP, dockerRegistryIP) {
-	//-t ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}
-		/* Container Expose port: 8091 configured as tomcat port in PC applictation properties. 	*/
-		// For troubel shooting: ssh -i  ~/.ssh/id_rsa -v
+def promotePCAPIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP, dockerRegistryIP, serviceAccount) {
 		sh """
-				ssh -i  ~/.ssh/id_rsa centos@${serverIP} 'docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -v /local/mnt:/local/mnt -d -p 8091:8091 --name ${artifactName} ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
+				ssh -i  ~/.ssh/id_rsa ${serviceAccount}@${serverIP} 'docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -v /local/mnt:/local/mnt -d -p 8091:8091 --name ${artifactName} ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
 				"""
 }
 
-def pullDockerImage(artifactName, releasedVersion, serverIP, dockerRegistryIP) {
+def pullDockerImage(artifactName, releasedVersion, serverIP, dockerRegistryIP, serviceAccount) {
 		sh """
-				ssh -i  ~/.ssh/id_rsa centos@${serverIP} 'docker pull ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
+				ssh -i  ~/.ssh/id_rsa ${serviceAccount}@${serverIP} 'docker pull ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
 				"""
 }
 /* ################################  UI Utility Methods ############################### */
@@ -164,7 +145,7 @@ def pullDockerImage(artifactName, releasedVersion, serverIP, dockerRegistryIP) {
 def npmBuild(applicationDir, branchName, repoUrl) {
 	dir(applicationDir) {
 		git branch: "${branchName}",
-		credentialsId: 'git-repo-ssh-access',
+		credentialsId: 'global-shared-library',
 		url: "${repoUrl}"
 
 		//node --version
@@ -207,19 +188,9 @@ def uiDockerBuild(applicationDir, artifactName, releasedVersion) {
 	}
 }
 
-def promoteUIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP) {
-	//-t ${artifactName}:${releasedVersion}
-	// For troubel shooting: ssh -i  ~/.ssh/id_rsa -v
+def promoteUIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP, dockerRegistryIP, serviceAccount) {
 		sh """
-				ssh -i  ~/.ssh/id_rsa centos@${serverIP} 'docker run -e \'APP_ENV=${PROP_ENV}\' -v /local/mnt/dpui:/var/log/nginx -d -p 8098:80 --name ${artifactName} ${artifactName}:${releasedVersion}'
-			"""
-}
-
-def promoteUIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP, dockerRegistryIP) {
-	// -t ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}
-	// For troubel shooting: ssh -i  ~/.ssh/id_rsa -v
-		sh """
-				ssh -i  ~/.ssh/id_rsa centos@${serverIP} 'docker run -e \'APP_ENV=${PROP_ENV}\' -v /local/mnt/dpui:/var/log/nginx -d -p 8098:80 --name ${artifactName} ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
+				ssh -i  ~/.ssh/id_rsa ${serviceAccount}@${serverIP} 'docker run -e \'APP_ENV=${PROP_ENV}\' -v /local/mnt/dpui:/var/log/nginx -d -p 8098:80 --name ${artifactName} ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
 			"""
 }
 
@@ -237,265 +208,4 @@ def sendEmailNotification(subjectText, bodyText) {
 				replyTo: "${mailRecipients}"
 			)
 
-}
-
-
-/* ################################  Promotion Pipeline ############################### */
-def distroCheckout(distroDirPath, distroRepoUrl) {
-	deleteDir()
-
-	// Check for directory
-	if(!fileExists(distroDirPath))
-	{
-		echo "${distroDirPath} doesn't exist.Continue cloning ..."
-
-		dir(distroDirPath){
-			git branch: 'master',
-			credentialsId: 'git-repo-ssh-access',
-			url: "${distroRepoUrl}"
-		}
-	}
-	else {
-		echo "${distroDirPath} is already exist.Continue updating ..."
-		sshagent (credentials: ['git-repo-ssh-access']) {
-			dir(distroDirPath) { sh "git pull origin HEAD:master" }
-		}
-	}
-}
-
-/* ################################  UNUSED Methods. Please Verify before DELETE ############################### */
-
-def deployAPIToDev(artifactName, releasedVersion, PROP_ENV) {
-	echo "releasedVersion in deployAPIToDev: ${releasedVersion}"
-	sh "docker ps"
-	def  containerId = sh (
-			script: "docker ps --no-trunc -aqf 'name=${artifactName}'",
-			returnStdout: true
-			).trim()
-	echo "containerId: ${containerId}"
-
-	if (containerId != "") {
-		sh "docker stop ${containerId}"
-		sh "docker rm -f ${containerId}"
-	}
-	sh "docker run -e 'SPRING_PROFILES_ACTIVE=${PROP_ENV}' -d -p 8099:8090 --name ${artifactName} -t ${artifactName}:${releasedVersion}"
-}
-
-def deployUIToDev(artifactName, releasedVersion, PROP_ENV) {
-	sh "docker ps"
-	def  containerId = sh (
-			script: "docker ps --no-trunc -aqf 'name=${artifactName}'",
-			returnStdout: true
-			).trim()
-	echo "containerId: ${containerId}"
-
-	if (containerId != "") {
-		sh "docker stop ${containerId}"
-		sh "docker rm -f ${containerId}"
-	}
-	sh "docker run -e 'APP_ENV=${PROP_ENV}' -d -p 8098:80 --name  ${artifactName} -t ${artifactName}:${releasedVersion}"
-}
-
-def commonAppCheckout(applicationDir, commonRepoUrl, branchName) {
-	deleteDir()
-	echo "Checkout in progress..."
-	dir(applicationDir) {
-		git branch: "${branchName}",
-		credentialsId: 'git-repo-ssh-access',
-		url: "${commonRepoUrl}"
-	}
-}
-
-def sourceCodeCheckout(applicationDir, branchName, repoUrl, distroDirPath, distroRepoUrl) {
-	deleteDir()
-	echo "Checkout in progress..."
-	dir(applicationDir) {
-		git branch: "${branchName}",
-		credentialsId: 'git-repo-ssh-access',
-		url: "${repoUrl}"
-	}
-
-	// Check for directory
-	if(!fileExists(distroDirPath))
-	{
-		echo "${distroDirPath} doesn't exist.Continue cloning ..."
-
-		dir(distroDirPath){
-			git branch: 'master',
-			credentialsId: 'git-repo-ssh-access',
-			url: "${distroRepoUrl}"
-		}
-	}
-	else {
-		echo "${distroDirPath} is already exist.Continue updating ..."
-		sshagent (credentials: ['git-repo-ssh-access']) {
-			dir(distroDirPath) { sh "git pull origin HEAD:master" }
-		}
-	}
-}
-
-def apiDockerBuild(applicationDir, artifactName, releasedVersion) {
-	dir(applicationDir) {
-		echo "Starting Docker Image Creation..."
-		// Build argument 'jar_file' defined in demandplannerapi Dockerfile.
-		sh "docker build --build-arg jar_file=target/${artifactName}-${releasedVersion}.jar -t ${artifactName}:${releasedVersion} ."
-		echo "Docker Image Creation Complted..."
-	}
-	sh "docker images"
-}
-
-def loadImage(distroDirPath, artifactName, releasedVersion, serverIP) {
-	   // BE CAREFUL WHILE DOING THIS. IT'S GOING TO REMOVE ALL THE **PREVIOUS** TAR(UI AND API) FILES
-		// To Remove snapshot TAR Files
-		try {
-			sh "ssh -i  ~/.ssh/id_rsa -v centos@${serverIP} 'ls && rm *${artifactName}*.tar ' "
-		} catch(error) {
-			echo "${error}"
-		}
-	
-	//sh "scp -Cp ${distroDirPath}/${artifactName}-${releasedVersion}.tar centos@${serverIP}:/home/centos"
-	//sh "ssh centos@${serverIP} 'ls && docker load -i ${artifactName}-${releasedVersion}.tar' "
-	sh "scp -C ${distroDirPath}/${artifactName}.tar centos@${serverIP}:/home/centos"
-	sh "ssh -i  ~/.ssh/id_rsa -v centos@${serverIP} 'ls && docker load -i ${artifactName}.tar' "
-}
-
-def loadImageInProd(distroDirPath, artifactName, releasedVersion, serverIP) {
-	sh "scp -C ${distroDirPath}/${artifactName}-${releasedVersion}.tar centos@${serverIP}:/home/centos"
-	sh "ssh -i  ~/.ssh/id_rsa -v centos@${serverIP} 'ls && docker load -i ${artifactName}-${releasedVersion}.tar' "
-}
-
-def promoteAPIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP) {
-		sh """
-				ssh -i  ~/.ssh/id_rsa -v centos@${serverIP} 'docker run -e \'SPRING_PROFILES_ACTIVE=${PROP_ENV}\' -v /var/logs/demandplannerapi:/var/logs -d -p 8099:8090 --name ${artifactName} ${artifactName}:${releasedVersion}'
-				"""
-}
-
-def saveImage(applicationDir, distroDirPath, artifactName, releasedVersion, GIT_IMAGE_PUSH) {
-		if (GIT_IMAGE_PUSH.toBoolean()) {
-			echo "Save Image to Tar Archive and pushing Tar to Git Repo"
-			saveImageToFS(applicationDir, distroDirPath, artifactName, releasedVersion)
-			saveImageToRepo(distroDirPath, artifactName, releasedVersion)
-		} else {
-			echo "Save Image to Tar Archive and Copy image to ${distroDirPath}"
-			saveImageToFS(applicationDir, distroDirPath, artifactName, releasedVersion)
-		}
-}
-
-def saveCommmonArtifact(applicationDir, distroDirPath, artifactName, releasedVersion, GIT_IMAGE_PUSH) {
-	if (GIT_IMAGE_PUSH.toBoolean()) {
-		echo "Save Common Jar to Git Repo"
-		dir (applicationDir) {
-			sh "cp -rf target/${artifactName}-${releasedVersion}.jar ${distroDirPath}"
-		}
-		//saveImageToRepo(distroDirPath, artifactName, releasedVersion)
-		sshagent (credentials: ['git-repo-ssh-access']) {
-			dir (distroDirPath) {
-				sh """
-					mv ${artifactName}-${releasedVersion}.jar ${artifactName}.jar
-					git add ${artifactName}.jar
-					git commit -m "Jenkins Job:${JOB_NAME} pushing jar file with released Version:${artifactName}-${releasedVersion}"
-					git push origin HEAD:master
-				"""
-			}
-		}
-	}	
-}
-
-
-/*
- * Save one or more images to a tar archive and copy to distro path.
- */
-def saveImageToFS(applicationDir, distroDirPath, artifactName, releasedVersion) {
-	sshagent (credentials: ['git-repo-ssh-access']) {
-		sh "docker images"
-
-		// Remove snapshot images in Jenkins box
-		dir (distroDirPath) {
-			def files = findFiles glob: '**/*snapshot*.tar'
-			boolean exists = files.length > 0
-			if(exists) {
-				sh 'ls && rm -rf *snapshot*.tar'
-			} else {
-				echo "NO snapshot IMAGES IN ${applicationDir}"	
-			}
-		}
-
-		dir (applicationDir) {
-			//docker save -o <path for generated tar file> <existing image name>
-			if (applicationDir == 'demandplannerapi') {
-				//sh "docker save -o target/${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
-				sh "docker save -o target/${artifactName}.tar ${artifactName}:${releasedVersion}"
-				echo "Copying demandplannerapi tar file to ${distroDirPath}"
-				//sh "cp -rf target/${artifactName}-${releasedVersion}.tar ${distroDirPath}"
-				sh "cp -rf target/${artifactName}.tar ${distroDirPath}"
-			} else if (applicationDir == 'demandplannerui') {
-				//sh "docker save -o ${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
-				sh "docker save -o ${artifactName}.tar ${artifactName}:${releasedVersion}"
-				echo "Copying demandplannerui tar file to ${distroDirPath}"
-				//sh "cp -rf ${artifactName}-${releasedVersion}.tar ${distroDirPath}"
-				sh "cp -rf ${artifactName}.tar ${distroDirPath}"
-			}
-		}
-	}
-}
-
-/*
- * Save one or more images to a tar archive and push to repo.
- */
-def saveImageToRepo(distroDirPath, artifactName, releasedVersion) {
-	echo "artifactName: ${artifactName}"
-	echo "releasedVersion: ${releasedVersion}"
-	
-	sshagent (credentials: ['git-repo-ssh-access']) {
-		dir (distroDirPath) {
-			sh """
-				git add ${artifactName}.tar
-				git commit -m "Jenkins Job:${JOB_NAME} pushing tar file with released Version:${artifactName}-${releasedVersion}"
-				git push origin HEAD:master
-			"""
-		}
-	}
-}
-
-def sendNotification(buildStatus) {
-	//def mailRecipients = 'r.satti@accenture.com, sashi.kumar.sharma@accenture.com, shresthi.garg@accenture.com, suresh.kumar.sahoo@accenture.com, s.b.jha@accenture.com';
-	def mailRecipients = 'r.satti@accenture.com'
-
-	/* PRINT ALL ENVIRONMENT VARIABLES
-	 sh 'env > env.txt'
-	 for (String i : readFile('env.txt').split("\r?\n")) {
-	 println i
-	 }
-	 */
-
-	// build status of null means success
-	def buildStatusVar =  buildStatus ?: 'SUCCESS'
-	echo "buildStatusVar: ${buildStatusVar}"
-
-	if (buildStatusVar == 'SUCCESS')
-	{
-		// notify users when the build is back to normal
-		emailext(
-				subject: "JENKINS Notification : Successful Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
-				//  Generates beautiful email format. Since I didn't write the contents of "groovy-html.template", I am afraid to use
-				//body: '''${SCRIPT, template="groovy-html.template"}''',
-				body: """ <p>Successful: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]':</p><p>Check console output at "<a href="${env.BUILD_URL}">${env.JOB_NAME} [${env.BUILD_NUMBER}]</a>"</p>""",
-				recipientProviders: [culprits(), developers(), requestor(), brokenTestsSuspects(), brokenBuildSuspects(), upstreamDevelopers()],
-				to: "${mailRecipients}",
-				replyTo: "${mailRecipients}"
-				)
-	}
-	else if (buildStatusVar == 'FAILURE')
-	{
-		// notify users when the Pipeline fails
-		emailext(
-				subject: "JENKINS Notification : FAILED Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
-				//  Generates beautiful email format. Since I didn't write the contents of "groovy-html.template", I am afraid to use
-				//body: '''${SCRIPT, template="groovy-html.template"}''',
-				body: """ <p>FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]':</p><p>Check console output at "<a href="${env.BUILD_URL}">${env.JOB_NAME} [${env.BUILD_NUMBER}]</a>"</p>""",
-				recipientProviders: [culprits(), developers(), requestor(), brokenTestsSuspects(), brokenBuildSuspects(), upstreamDevelopers()],
-				to: "${mailRecipients}",
-				replyTo: "${mailRecipients}"
-				)
-	}
 }
