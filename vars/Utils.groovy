@@ -120,6 +120,17 @@ def stopContainer(artifactName, serverIP, serviceAccount) {
 	}
 }
 
+def apiDockerBuild(applicationDir, artifactName, releasedVersion) {
+	dir(applicationDir) {
+		echo "Starting Docker Image Creation..."
+		// Build argument 'jar_file' defined in demandplannerapi Dockerfile.
+		sh "docker build --build-arg jar_file=target/${artifactName}-${releasedVersion}.jar -t ${artifactName}:${releasedVersion} ."
+		echo "Docker Image Creation Complted..."
+	}
+	sh "docker images"
+}
+
+
 /*Demand Planner API Configuration */
 def promoteDPAPIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP, dockerRegistryIP, serviceAccount) {
 		sh """
@@ -158,16 +169,6 @@ def npmBuild(applicationDir, branchName, repoUrl) {
 	}
 }
 
-def apiDockerBuild(applicationDir, artifactName, releasedVersion) {
-	dir(applicationDir) {
-		echo "Starting Docker Image Creation..."
-		// Build argument 'jar_file' defined in demandplannerapi Dockerfile.
-		sh "docker build --build-arg jar_file=target/${artifactName}-${releasedVersion}.jar -t ${artifactName}:${releasedVersion} ."
-		echo "Docker Image Creation Complted..."
-	}
-	sh "docker images"
-}
-
 def uiCodeQualityAnalysis(applicationDir, releaseVersion) {
 	//********* Configure a webhook in your SonarQube server pointing to <your Jenkins instance>/sonarqube-webhook/ ********
 	def sonarqubeScannerHome = tool 'SonarQubeScanner_V3'
@@ -200,7 +201,7 @@ def uiDockerBuild(applicationDir, artifactName, releasedVersion) {
 
 def promoteUIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP, dockerRegistryIP, serviceAccount) {
 		sh """
-				ssh -i  ~/.ssh/id_rsa ${serviceAccount}@${serverIP} 'docker run -e \'APP_ENV=${PROP_ENV}\' -v /local/mnt/dpui:/var/log/nginx -d -p 8098:80 --name ${artifactName} ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
+				ssh -i  ~/.ssh/id_rsa ${serviceAccount}@${serverIP} 'docker run -e \'APP_ENV=${PROP_ENV}\' -v /local/mnt/workspace/dpui:/var/log/nginx -d -p 8098:80 --name ${artifactName} ${dockerRegistryIP}:5000/${artifactName}:${releasedVersion}'
 			"""
 }
 
@@ -218,4 +219,53 @@ def sendEmailNotification(subjectText, bodyText) {
 				replyTo: "${mailRecipients}"
 			)
 
+}
+
+/* ################################  Store Docker Images in NFS Drive  ############################### */
+def saveImage(applicationDir, distroDirPath, artifactName, releasedVersion, GIT_IMAGE_PUSH) {
+		if (GIT_IMAGE_PUSH.toBoolean()) {
+			echo "Save Image to Tar Archive and pushing Tar to Git Repo"
+			saveImageToFS(applicationDir, distroDirPath, artifactName, releasedVersion)
+			saveImageToRepo(distroDirPath, artifactName, releasedVersion)
+		} else {
+			echo "Save Image to Tar Archive and Copy image to ${distroDirPath}"
+			saveImageToFS(applicationDir, distroDirPath, artifactName, releasedVersion)
+		}
+}
+
+/*
+ * Save one or more images to a tar archive and copy to distro path.
+ */
+def saveImageToFS(applicationDir, distroDirPath, artifactName, releasedVersion) {
+	sshagent (credentials: ['git-repo-ssh-access']) {
+		sh "docker images"
+
+		// Remove snapshot images in Jenkins box
+		dir (distroDirPath) {
+			def files = findFiles glob: '**/*snapshot*.tar'
+			boolean exists = files.length > 0
+			if(exists) {
+				sh 'ls && rm -rf *snapshot*.tar'
+			} else {
+				echo "NO snapshot IMAGES IN ${applicationDir}"	
+			}
+		}
+
+		dir (applicationDir) {
+			//docker save -o <path for generated tar file> <existing image name>
+			if (applicationDir == 'demandplannerapi') {
+				//sh "docker save -o target/${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
+				sh "docker save -o target/${artifactName}.tar ${artifactName}:${releasedVersion}"
+				echo "Copying demandplannerapi tar file to ${distroDirPath}"
+				//sh "cp -rf target/${artifactName}-${releasedVersion}.tar ${distroDirPath}"
+				sh "cp -rf target/${artifactName}.tar ${distroDirPath}"
+			} else if (applicationDir == 'demandplannerui') {
+				//sh "docker save -o ${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
+				sh "docker save -o ${artifactName}.tar ${artifactName}:${releasedVersion}"
+				echo "Copying demandplannerui tar file to ${distroDirPath}"
+				//sh "cp -rf ${artifactName}-${releasedVersion}.tar ${distroDirPath}"
+				sh "cp -rf ${artifactName}.tar ${distroDirPath}"
+			}
+		}
+	}
 }
