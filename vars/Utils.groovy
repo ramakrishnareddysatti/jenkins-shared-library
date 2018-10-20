@@ -123,7 +123,7 @@ def stopContainer(artifactName, serverIP, serviceAccount) {
 def apiDockerBuild(applicationDir, artifactName, releasedVersion) {
 	dir(applicationDir) {
 		echo "Starting Docker Image Creation..."
-		// Build argument 'jar_file' defined in demandplannerapi Dockerfile.
+		// Build argument 'jar_file' defined in CLIENT_PROJ Dockerfile.
 		sh "docker build --build-arg jar_file=target/${artifactName}-${releasedVersion}.jar -t ${artifactName}:${releasedVersion} ."
 		echo "Docker Image Creation Complted..."
 	}
@@ -210,7 +210,7 @@ def promoteUIToEnv(artifactName, releasedVersion, PROP_ENV, serverIP, dockerRegi
 def sendEmailNotification(subjectText, bodyText) {
 	//subjectText = "JENKINS Notification : Successful Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'"
 	//bodyText = """ <p>Successful: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]':</p><p>Check console output at "<a href="${env.BUILD_URL}">${env.JOB_NAME} [${env.BUILD_NUMBER}]</a>"</p>"""
-	def mailRecipients = 'r.satti@accenture.com, suresh.kumar.sahoo@accenture.com'
+	def mailRecipients = 'XXX@XXX.com'
 	emailext(
 				subject: subjectText,
 				body: bodyText,
@@ -253,10 +253,10 @@ def saveImageToFS(applicationDir, distroDirPath, artifactName, releasedVersion) 
 
 		dir (applicationDir) {
 			//docker save -o <path for generated tar file> <existing image name>
-			if (applicationDir == 'demandplannerapi') {
+			if (applicationDir == 'CLIENT_PROJ') {
 				//sh "docker save -o target/${artifactName}-${releasedVersion}.tar ${artifactName}:${releasedVersion}"
 				sh "docker save -o target/${artifactName}.tar ${artifactName}:${releasedVersion}"
-				echo "Copying demandplannerapi tar file to ${distroDirPath}"
+				echo "Copying CLIENT_PROJ tar file to ${distroDirPath}"
 				//sh "cp -rf target/${artifactName}-${releasedVersion}.tar ${distroDirPath}"
 				sh "cp -rf target/${artifactName}.tar ${distroDirPath}"
 			} else if (applicationDir == 'demandplannerui') {
